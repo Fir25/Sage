@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    </head>
+    <body>
+        <p>Bonjour<br/>
+            Vous trouverez ci-dessous un récap sur les pointages impair, les sorties avant l’heure et les retards des collaborateurs de votre département.
+            </p>
+        <h2 style="color: #5581b0;">Les retards et les sorties avant l'heure</h2>
+        <table border="1"><tr  style="background-color:#fadb83;"><th>Nom</th><th>Prénom</th><th>Matricule</th> <th>Retard d entrée</th><th>
+            Temps avant sortie</th></tr>
+            
+            {% for r in result %}
+            <tr
+            ><td>{{r.user_name}}</td>
+                <td>{{r.last_name}}</td>
+                <td>
+                {{r.matricule}}</td><td>{{r.lateEntree}}</td><td>{{r.earlySortie}}</td> 
+                </tr>
+                {% endfor %}
+            </table> 
+            <h2 style="color: #5581b0;">Les anomalies</h2>
+            <table border="1"><tr style="background-color:#fadb83;"><th>Nom</th><th>Prénom</th><th>Matricule</th> <th>Date de pointage</th><th>
+               Pointages</th></tr>
+                
+                {% for a in anomalie %}
+                <tr><td>{{a.user_name}}</td>
+                    <td>{{a.last_name}}</td>
+                    <td>
+                    {{a.matricule}}</td><td>{{a.date}}</td><td>{{a.pointages}}</td> 
+                    </tr>
+                    {% endfor %}
+                </table>
+                <br/> 
+                Merci 
+                IPSTIME
+                
+    </body>
+</html>

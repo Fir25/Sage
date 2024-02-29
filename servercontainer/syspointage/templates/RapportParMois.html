@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+</head>
+
+<body>
+    <p>Bonjour<br />
+        Vous trouverez ci-dessous votre rapport mensuelle pour le mois    {{mois}}
+    </p>
+    <h2 style="color: #5581b0;"></h2>
+    <table border="1">
+        <tr style="background-color:#fadb83;">
+
+
+            <th>Nbre de jours travaillés</th>
+            <th>Nbre de retard </th>
+            <th>Nbre de départ anticipé </th>
+
+            <th>Nbre de congés</th>
+            <th>
+                Nbre d’absence non justifiée</th>
+                <th>Nbre de jours avec pointages impaires</th>
+                <th>Amplitude</th>
+        </tr>
+
+        {% for r in result %}
+        <tr>
+            <td>{{r.jourtravaille}}</td>
+            <td>{{r.retardEntree}}</td>
+            <td>{{r.heureavantsortie}}</td>
+            <td>
+                {{r.jourconge}}</td>
+            <td>{{r.absnonjust}}</td>
+            <td>{{r.impair}}</td>
+            <td>{{r.amplitude}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <br />
+    Merci
+    IPSTIME
+
+</body>
+
+</html>
