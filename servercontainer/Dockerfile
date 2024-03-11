@@ -1,5 +1,7 @@
 FROM ubuntu:20.04
 
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update \
     && apt-get install -y locales \
     && locale-gen fr_CA.UTF-8 \
@@ -15,7 +17,6 @@ RUN apt-get update \
     && ACCEPT_EULA=Y apt-get install -y msodbcsql17 \
     && sed -i 's/SECLEVEL=2/SECLEVEL=0/g' /etc/ssl/openssl.cnf
 
-ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get install -y tzdata \
     && ln -fs /usr/share/zoneinfo/Africa/Tunis /etc/localtime \

@@ -35,12 +35,12 @@ services:
   nginx:
     image: nginx:latest
     ports:
-      - "80:80"  
+      - "443:443"  
   
     volumes:
-      # - ./ac:/etc/nginx/ssl
+      - ./cert:/etc/nginx/ssl
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      #- ./nginx/entrypoint.sh:/etc/nginx/entrypoint.sh
+     # - ./nginx/entrypoint.sh:/etc/nginx/entrypoint.sh
       - react_build:/var/www/react
       
     depends_on:
@@ -52,14 +52,18 @@ services:
     restart: always
 
   mysql:
-     image: mysql:latest
-     container_name: mysql-db
-     environment:
-       MYSQL_ROOT_HOST: '%'
-       MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
-     ports:
-       - "3306:3306"   
+    image: mysql:latest
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: 'IP-soft@2024'
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - "3306:3306"
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    restart: always
 
 volumes:
-  postgres:
+  mysql-data:
   react_build:

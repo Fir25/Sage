@@ -162,7 +162,7 @@ class plansemaine  (models.Model):
 class planning (models.Model): 
     title  = models.TextField(max_length=250 , null=True , blank=True  ) 
     start = models.DateField(blank=True,null=True)
-    employe = models.ForeignKey( NewUser, blank=True, null=True,   on_delete=SET_DEFAULT,  default=None , related_name='employe' ,  verbose_name='nom employe ')
+    employe = models.ForeignKey( 'syspointage.NewUser', blank=True, null=True,   on_delete=SET_DEFAULT,  default=None , related_name='employe' ,  verbose_name='nom employe ')
     end = models.DateField(blank=True,null=True)
     plantravail = models.ForeignKey( plansemaine, blank=True, null=True,   on_delete=SET_DEFAULT,  default=None , related_name='plansemaine' ,  verbose_name='plansemaine')
     created_at = models.DateTimeField(auto_now_add=True)  
