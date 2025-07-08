@@ -24,6 +24,7 @@ import frdatatable from '../../frdatatable.json'
 import { useSelector } from "react-redux";
 export const ComponentMensuelleToPrint = React.forwardRef((props, ref) => {
   const url=process.env.React_App_URL;
+  const[alert,setAlert]=useState(false)
   const token = localStorage.getItem('access_token') ? 'Bearer ' +localStorage.getItem('access_token') :null
   const userinfo =useSelector(state => state.userinfo);
   const test=userinfo[0]
@@ -38,48 +39,119 @@ export const ComponentMensuelleToPrint = React.forwardRef((props, ref) => {
   }
   var iddep=iddd==""? undefined:iddd
   const [uss,setuss]=useState([])
-  const users=[]
+  const [ligne, setLigne] = useState([]);
+ const [listeligne, setListeLigne] = useState([]);
+ const { data: ligness = [], isloading: loadingLigne, error: errorLigne } = useFetch(url + "listligne");
 
-  const[uu,setU]=useState([])
-const[alert,setAlert]=useState(false)
+//  useEffect(() => {
+ 
+//     setListeLigne(lignes.map(l => ({ label: l.nom, value: l.id }))); // Adapter selon ton API
 
-  const [activite, setActivite] = useState([])
-  const activities = [
-    { "label": "activité", "value": "1" },
-    { "label": "Suspendu", "value": "0" }
-  ]
-  const [site, setSite] = useState([])
-  const { data: sites = [], isloading, error } = useFetch(url+"ListSite_ForSelect/")
-  const [iddepar, setIddepar] = useState([])
-  const ac = []
-  const si = []
-  useEffect(() => {
-    ac.push(activite.map(x => x.value))
-    si.push(site.map(y => y.value))
+//  }, [lignes]);
+ const users=[]
+ const lg=[]
+ const ac = []
+ const si = []
+ const[uu,setU]=useState([])
 
+ const [selectedDepartments, setSelectedDepartments] = useState([]);
+
+ // Lorsque les départements sont sélectionnés, nous les mettons à jour dans l'état
+ const handleDepartmentChange = (selectedValues) => {
+   setSelectedDepartments(selectedValues);  // Cela met à jour la sélection multiple des départements
+ };
+ 
+ const [activite, setActivite] = useState([])
+ const activities = [
+   { "label": "activité", "value": "1" },
+   { "label": "Suspendu", "value": "0" }
+ ]
+ 
+ const [site, setSite] = useState([])
+ const { data: sites = [], isloading, error } = useFetch(url+"ListSite_ForSelect/")
+const optionsRapport=[
+ { "label": " matricule", "value": "matricule" },
+ { "label": "user_name", "value": "user_name" },
+ { "label": "last_name", "value": "last_name" },
+ { "label": "date_pointage", "value": "date_pointage" },
+ { "label": "nomhoraire", "value": "nomhoraire" },
+ { "label": "debuthoraire", "value": "debuthoraire" },
+ { "label": "finhoraire", "value": "finhoraire" },
+ { "label": "Entree", "value": "Entree" },
+ { "label": "Sortie", "value": "Sortie" },
+ { "label": "refpointeuse", "value": "refpointeuse" },
+ { "label": "jour_travaille", "value": "jour_travaille" },
+ { "label": "jour_nrmlmn_travaille", "value": "jour_nrmlmn_travaille" },
+ { "label": "retard", "value": "retard" },
+ { "label": "depart_anticipe", "value": "depart_anticipe" },
+ { "label": "Absent", "value": "Absent" },
+ { "label": "heuresup", "value": "heuresup" },
+ { "label": "heuresupvalide", "value": "heuresupvalide" },
+ { "label": "presenceplann", "value": "presenceplann" },
+ { "label": "motif", "value": "motif" },
+ { "label": "departement_name", "value": "departement_name" },
+ { "label": "presencenormal", "value": "presencenormal" }
+   // {"label":"Matricule","value":"Matricule"},
+   // {"label":"Autorisation","value":"Autorisation"},
+   // {"label":"Nom Employé","value":"Nom Employé"},
+   // {"label":"Date","value":"Date"},
+   // {"label":"Déficit","value":"Déficit"},
+   // {"label":"h.Travail","value":"h.Travail"},
+   // {"label":"h.Théorique","value":"h.Théorique"},
+   // {"label":"Pointages","value":"Pointages"},
+   // {"label":"Retard d'entrée","value":"Retard d'entrée"},
+   // {"label":"Retard de midi","value":"Retard de midi"},
+   // {"label":"Départ anticipé","value":"Départ anticipé"},
+
+   // {"label":"Mission","value":"Mission"},
+   // {"label":"Congé","value":"Congé"},
+   // {"label":"Motif","value":"Motif"},
    
-    fetch(url+"userofdepartements/?id=" + uu+ "&idactivite=" + ac , {method: 'GET', 
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: token,
-    }}).then((result) => {
-      result.json().then((resp) => {
-    
-      resp.map(x=>users.push({"label":x.label,"value":x.value}))
-      setuss(resp)
-      })
-    
-    }).catch((err)=>{
-    /**  if ( err.response.status=== 401) {
-        logoutfunction(err.response.status)
-      } */
-    })
+   // {"label":"Travail brute","value":"Travail brute"},
+   // {"label":"Département","value":"Département"},
+   // {"label": "Horaire", "value": "Horaire"},
+   // {"label": "Réf pointeuse", "value": "Réf pointeuse"}
+ ];
 
-  }, [activite, site,uu])
+ useEffect(() => {
+   ac.push(activite.map(x => x.value))
+   si.push(site.map(y => y.value))
+   console.log(ligne)
+   lg.push(ligne.map(l => l.value))
+   fetch(url+"userofdepartements/?id=" + uu+ "&idactivite=" + ac+"&idligne="+lg , {method: 'GET', 
+   headers: {
+     'Content-Type': 'application/json',
+     Accept: 'application/json',
+     Authorization: token,
+   }}).then((result) => {
+    
+/** if ( result.status===401) {
+       logoutfunction(result.status)
+     } */
+     result.json().then((resp) => {
+   
+     resp.map(x=>users.push({"label":x.label,"value":x.value}))
+     setuss(resp)
+     })
+   
+   })        .catch(err => {
+    /** if ( err.response.status=== 401) {
+       logoutfunction(err.response.status)
+     } */
+    
+   })
 
-  const [selectedd, setSelectedd] = useState([]);
-  const arr=[]
+ }, [activite, site,ligne,uu])
+
+
+ 
+ const [optionrap,setoptionsrap]=useState([])
+
+
+ 
+
+ const [selectedd, setSelectedd] = useState([]);
+ const arr=[]
   $(document).ready(function () {
     
     $('#rapmen').DataTable({
@@ -306,6 +378,11 @@ const[alert,setAlert]=useState(false)
 
 
               </div>
+              { <div className="col-md-3">
+                <label>Ligne </label>
+                <MultiSelect  options={ligness}  value={ligne}  onChange={setLigne}  />
+
+              </div> }
 
               <div className='col-md-3'>
          <label>Département</label>

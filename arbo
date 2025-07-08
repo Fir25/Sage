@@ -1,0 +1,60 @@
+import pandas as pd
+import psycopg2
+
+# File path for your Excel file
+file_path = '/home/srv-pointage/projet/Class3.xlsx'
+
+# PostgreSQL connection details
+conn = psycopg2.connect(
+    dbname='ipstime',
+    user='root',
+    password='root',
+    host='192.168.1.113',
+    port='5432'
+)
+
+cur = conn.cursor()
+
+lissst = []
+# Load Excel file without headers if they are not present
+data = pd.read_excel(file_path, header=None)
+
+# Function to handle NULL values for clean display
+def handle_null(value):
+    return None if pd.isna(value) or value == '' else value
+
+# Function to convert active status to boolean
+def convert_to_boolean(value):
+    if value in ['si', 'yes', True, 1]:
+        return True
+    else:
+        return False
+
+# Loop over each row in the DataFrame
+for index, row in data.iterrows():
+    # Access data by column index (adjust these indices based on your file's structure)
+    newuser_id = handle_null(row[1])  # Here you would normally retrieve the correct ID
+    arborescence_id = handle_null(row[5])  # Example value, change this as needed
+   
+
+   
+
+    # Prepare the INSERT statement with newuser_id and arborescence_id
+    insert_query = """
+    INSERT INTO syspointage_newuser_arborescence (newuser_id, arborescence_id)
+    VALUES (%s, %s);
+    """
+    
+    # Assuming you have logic to determine newuser_id and arborescence_id
+   
+
+    # Execute the insert statement
+    cur.execute(insert_query, (newuser_id, arborescence_id))
+
+    # Commit the changes to the database
+    conn.commit()
+
+# Close the connection
+cur.close()
+conn.close()
+

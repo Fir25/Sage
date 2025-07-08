@@ -36,49 +36,122 @@ export const ComponentSemaineToPrint = React.forwardRef((props, ref) => {
   }
   var iddep=iddd==""? undefined:iddd
   const [uss,setuss]=useState([])
-  const users=[]
-const [alert,setAlert]=useState(false)
-  const[uu,setU]=useState([])
-  const [activite, setActivite] = useState([])
-  const activities = [
-    { "label": "activité", "value": "1" },
-    { "label": "Suspendu", "value": "0" }
-  ]
-  const [site, setSite] = useState([])
-  const { data: sites = [], isloading, error } = useFetch(url+"ListSite_ForSelect/")
+  const [ligne, setLigne] = useState([]);
+  const [superviseur, setSuperviseur] = useState([]);
+ const [listeligne, setListeLigne] = useState([]);
+ const { data: ligness = [], isloading: loadingLigne, error: errorLigne } = useFetch(url + "listligne");
+ const { data: superviseurs = [], isloading: loadingSuperviseur, error: errorSuperviseur } = useFetch(url + "listsuperviseur");
+//  useEffect(() => {
  
-  const ac = []
-  const si = []
-  useEffect(() => {
-    ac.push(activite.map(x => x.value))
-    si.push(site.map(y => y.value))
+//     setListeLigne(lignes.map(l => ({ label: l.nom, value: l.id }))); // Adapter selon ton API
 
-    fetch(url+"userofdepartements/?id=" + uu+ "&idactivite=" + ac  , {method: 'GET', 
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: token,
-    }}).then((result) => {
+//  }, [lignes]);
+ const users=[]
+ const lg=[]
+ const ac = []
+ const si = []
+ const sup = []
+ const[uu,setU]=useState([])
 
-    /** if ( result.status===401) {
-        logoutfunction(result.status)
-      } */
-      result.json().then((resp) => {
+ const [selectedDepartments, setSelectedDepartments] = useState([]);
+
+ // Lorsque les départements sont sélectionnés, nous les mettons à jour dans l'état
+ const handleDepartmentChange = (selectedValues) => {
+   setSelectedDepartments(selectedValues);  // Cela met à jour la sélection multiple des départements
+ };
+ const[alert,setAlert]=useState(false)
+ const [activite, setActivite] = useState([])
+ const activities = [
+   { "label": "activité", "value": "1" },
+   { "label": "Suspendu", "value": "0" }
+ ]
+ 
+ const [site, setSite] = useState([])
+ const { data: sites = [], isloading, error } = useFetch(url+"ListSite_ForSelect/")
+const optionsRapport=[
+ { "label": " matricule", "value": "matricule" },
+ { "label": "user_name", "value": "user_name" },
+ { "label": "last_name", "value": "last_name" },
+ { "label": "date_pointage", "value": "date_pointage" },
+ { "label": "nomhoraire", "value": "nomhoraire" },
+ { "label": "debuthoraire", "value": "debuthoraire" },
+ { "label": "finhoraire", "value": "finhoraire" },
+ { "label": "Entree", "value": "Entree" },
+ { "label": "Sortie", "value": "Sortie" },
+ { "label": "refpointeuse", "value": "refpointeuse" },
+ { "label": "jour_travaille", "value": "jour_travaille" },
+ { "label": "jour_nrmlmn_travaille", "value": "jour_nrmlmn_travaille" },
+ { "label": "retard", "value": "retard" },
+ { "label": "depart_anticipe", "value": "depart_anticipe" },
+ { "label": "Absent", "value": "Absent" },
+ { "label": "heuresup", "value": "heuresup" },
+ { "label": "heuresupvalide", "value": "heuresupvalide" },
+ { "label": "presenceplann", "value": "presenceplann" },
+ { "label": "motif", "value": "motif" },
+ { "label": "departement_name", "value": "departement_name" },
+ { "label": "presencenormal", "value": "presencenormal" }
+   // {"label":"Matricule","value":"Matricule"},
+   // {"label":"Autorisation","value":"Autorisation"},
+   // {"label":"Nom Employé","value":"Nom Employé"},
+   // {"label":"Date","value":"Date"},
+   // {"label":"Déficit","value":"Déficit"},
+   // {"label":"h.Travail","value":"h.Travail"},
+   // {"label":"h.Théorique","value":"h.Théorique"},
+   // {"label":"Pointages","value":"Pointages"},
+   // {"label":"Retard d'entrée","value":"Retard d'entrée"},
+   // {"label":"Retard de midi","value":"Retard de midi"},
+   // {"label":"Départ anticipé","value":"Départ anticipé"},
+
+   // {"label":"Mission","value":"Mission"},
+   // {"label":"Congé","value":"Congé"},
+   // {"label":"Motif","value":"Motif"},
+   
+   // {"label":"Travail brute","value":"Travail brute"},
+   // {"label":"Département","value":"Département"},
+   // {"label": "Horaire", "value": "Horaire"},
+   // {"label": "Réf pointeuse", "value": "Réf pointeuse"}
+ ];
+
+ useEffect(() => {
+   ac.push(activite.map(x => x.value))
+   si.push(site.map(y => y.value))
+   console.log(ligne)
+   lg.push(ligne.map(l => l.value))
+   sup.push(superviseur.map(s=>s.value))
+   fetch(url+"userofdepartements/?id=" + uu+ "&idactivite=" + ac+"&idligne="+lg +"&idsuperviseur="+sup, {method: 'GET', 
+   headers: {
+     'Content-Type': 'application/json',
+     Accept: 'application/json',
+     Authorization: token,
+   }}).then((result) => {
     
-      resp.map(x=>users.push({"label":x.label,"value":x.value}))
-      setuss(resp)
-      })
+/** if ( result.status===401) {
+       logoutfunction(result.status)
+     } */
+     result.json().then((resp) => {
+   
+     resp.map(x=>users.push({"label":x.label,"value":x.value}))
+     setuss(resp)
+     })
+   
+   })        .catch(err => {
+    /** if ( err.response.status=== 401) {
+       logoutfunction(err.response.status)
+     } */
     
-    }).catch((err)=>{
-     /** if ( err.response.status=== 401) {
-        logoutfunction(err.response.status)
-      } */
+   })
 
-    })
+ }, [activite, site,ligne,superviseur ,uu])
 
-  }, [activite, site,uu])
-  const [selectedd, setSelectedd] = useState([]);
-  const arr = []
+
+ 
+ const [optionrap,setoptionsrap]=useState([])
+
+
+ 
+
+ const [selectedd, setSelectedd] = useState([]);
+ const arr=[]
   $(document).ready(function () {
     $('#rapsema').DataTable({
       language:frdatatable,
@@ -121,13 +194,15 @@ const [alert,setAlert]=useState(false)
     setAlert(false)
     arr.push(selectedd.map(x => x.value))
     if (loginemploye == false) {
-      fetch(url+"rapportsemaine/" + date1 + "/" + date2 + "/?id=" + arr , {method: 'GET', 
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: token,
-      }}).then((result) => {
-        result.json().then((resp) => {
+      fetch(url+"rapportsemaine/" +date1+"/"+date2+"/" , {method: 'POST', 
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({ ids: arr }), // Envoie les IDs dans le body
+      }).then((result) => {
+        result.json().then((resp) => { 
           setPost(true)
           setData(resp)
 
@@ -291,13 +366,24 @@ const [alert,setAlert]=useState(false)
 
 
                 </div>
-
                 <div className='col-md-3'>
 <label>Département</label>
 
                 {dropdown}
 
                 </div>
+                { <div className="col-md-3">
+                <label>Ligne </label>
+                <MultiSelect  options={ligness}  value={ligne}  onChange={setLigne}  />
+
+              </div> }
+              { <div className="col-md-3">
+                <label>Superviseur </label>
+                <MultiSelect  options={superviseurs}  value={superviseur}  onChange={setSuperviseur}  />
+
+              </div> }
+
+               
             </div>
  
               <div className="row  pt-4 pl-4 pr-4">
@@ -386,9 +472,9 @@ dat.length==0?"":
                             <th colSpan="1">Pr.Nrml</th>
                             <th colSpan="1">déficit</th>
                             <th colSpan="1">HS</th>
-                            <th colSpan="1">retard</th>
-                            <th colSpan="1" >Amplitude</th>
-                            <th colSpan="1" style={{ borderRight: "1px solid #bbbbbb" }}>SAH</th>
+                            <th colSpan="1"style={{ borderRight: "1px solid #bbbbbb" }}>retard</th>
+                            {/* <th colSpan="1" >Amplitude</th> */}
+                            {/* <th colSpan="1" style={{ borderRight: "1px solid #bbbbbb" }}>SAH</th> */}
                             
                             
                             </>) : ""}</>)}
@@ -398,8 +484,8 @@ dat.length==0?"":
                     <th colSpan="1">déficit</th>
                     <th colSpan="1" title="heures supplémentaires">HS</th>
                     <th colSpan="1">retard</th>
-                    <th colSpan="1"></th>
-                    <th colSpan="1" >SAH</th>
+                    {/* <th colSpan="1"></th>
+                    <th colSpan="1" >SAH</th> */}
                
                   
                     
@@ -427,11 +513,11 @@ dat.length==0?"":
                             <td>{se.deficit}</td>
                             <td>{se.suplementaire}</td>
 
-
                             <td>{se.retard}</td>
-                            <td>{se.amplitude}</td>
+                           
+                            {/* <td>{se.amplitude}</td>
                             <td style={{ borderRight: "1px solid #bbbbbb" }}>{se.avantSortie}</td>
-
+ */}
 
                           </>
                         )
@@ -445,7 +531,7 @@ dat.length==0?"":
 
                         <td>{retardTotale}</td>
                         <td></td>
-                        <td>{avant_st}</td>
+                        {/* <td>{avant_st}</td> */}
                       
 
                       </tr>

@@ -15,6 +15,8 @@ function ImporterPointeuse(){
     
   const [options,setoptions]=useState([])
     const [SIV, setSIV] = useState('');
+    const [etat, setEtat] = useState(true); // false = inactif, true = actif
+
   
     const handlesubmit = (e) =>{
 
@@ -169,6 +171,14 @@ function getEmails(){
                 <input className="custom-control-input" id=" customCheckLogin" type="checkbox"/>
                 
             </div>
+            <label>
+  Entrée
+  <input
+    type="checkbox"
+    checked={etat}
+    onChange={(e) => setEtat(e.target.checked)}
+  />
+</label>
             <div className="text-center">
                 <button type="button" className="btn btn-primary my-4" onClick={handlesubmit}>Enregistrer</button>
             </div>

@@ -2,14 +2,15 @@ from . models import *
 from django.db import connection
 from django.core.cache import cache
 from . calcul_func import *
-from . rapport_journalier import *
+# from . rapport_journalier import *
+from . rapport_journal import *
 import calendar
 
 def rapportmensul(listids,date1,date2):
         jsondata=[]
         listmois=[]
         minuts=0.0
-        ttzero=datetime.datetime.strptime("00:00:00","%H:%M:%S").time()
+        ttzero=datetime.strptime("00:00:00","%H:%M:%S").time()
         presencenor=0.0
         totalheuretheorique=0.0
         totalheureeffective=0.0
@@ -69,9 +70,9 @@ def rapportmensul(listids,date1,date2):
                 jourconge=0
                 impair=0
                 amplitude=0.0
-                for single_date in daterange(ss,(datetime.datetime.strptime(str(ss),"%Y-%m-%d")+timedelta(days=dayss-1)).date()):
+                for single_date in daterange(ss,(datetime.strptime(str(ss),"%Y-%m-%d")+timedelta(days=dayss-1)).date()):
                 #for single_date in daterange(ss,(datetime.datetime.strptime(str(ss),"%Y-%m-%d")+timedelta(days=nombrejours)).date()):
-                     a=Rapportunjour(int(y),str(single_date))
+                     a=Rapportunjoure(int(y),str(single_date))
                   
                      if a:
                         jsondata.append({"motif":a[0]["motif"],"Entree": a[0]["Entree"], "Sortie": a[0]["Sortie"], "earlyEntree":a[0]["earlyEntree"], "lateEntree":a[0]["lateEntree"], "earlySortie":a[0]["earlySortie"], "lateSortie":a[0]["lateSortie"], "user_name": a[0]["user_name"], "matricule":a[0]["matricule"], "date_pointage": a[0]["date_pointage"], "planing":a[0]["planing"],'heuretravail': a[0]["heuretravail"], 'pause': a[0]["pause"],'presencenormal':a[0]['presencenormal'],"jourtravaille":a[0]['jourtravaille'],"entreepointage":a[0]['entreepointage'],"sortiepointage":a[0]['sortiepointage'],"heureauthorisation":a[0]['heureauthorisation'],"deficit":a[0]["deficit"],"iduser":a[0]["iduser"],"pointages":a[0]["pointages"],"tempabsence":a[0]["tempabsence"],"jourconge":a[0]["jourconge"],"tempsMission":a[0]["tempsMission"],"last_name":a[0]['last_name']})  
@@ -120,7 +121,7 @@ def rapportmensul(listids,date1,date2):
                       travailminutesdirect=minuts
                       heuretravail_user_direct=heuretravail
                       heuretravail_user_indirect=str(minutes_hours(0))
-                   listmois.append({"amplitude":amplitude,"impair":impair,"absnonjust":absnonjust,"jourconge":jourconge,"jourtravaille":jourtravaille,"heuretravailindirect":heuretravail_user_indirect,"heuredtravaildirect":heuretravail_user_direct,"user_name":jsondata[0]["user_name"],"matricule":jsondata[0]["matricule"],"presencereele":heuretravail,'presencenormal':Presence_normale,'debutmois':str(ss),'finmois':str((datetime.datetime.strptime(str(ss),"%Y-%m-%d")+timedelta(days=dayss-1)).date()),"retardEntree":r,"heureavantsortie":earlysortie,"deficit":dd,"prnormalminutes":str(presencenor),"totalheureeffective":str(minuts),"heuretravail_direct":str(travailminutesdirect),"heuretravail_indirect":str(travailminutesindirect),"deficitminutes_total":str(defi),"heureavantsortieminutes":str(heureavantsortie),"retardminutes":str(retard),"iduser":jsondata[0]["iduser"],"absence_defi":str(arrondi_deficit_absence),"last_name":jsondata[0]["last_name"]})
+                   listmois.append({"amplitude":amplitude,"impair":impair,"absnonjust":absnonjust,"jourconge":jourconge,"jourtravaille":jourtravaille,"heuretravailindirect":heuretravail_user_indirect,"heuredtravaildirect":heuretravail_user_direct,"user_name":jsondata[0]["user_name"],"matricule":jsondata[0]["matricule"],"presencereele":heuretravail,'presencenormal':Presence_normale,'debutmois':str(ss),'finmois':str((datetime.strptime(str(ss),"%Y-%m-%d")+timedelta(days=dayss-1)).date()),"retardEntree":r,"heureavantsortie":earlysortie,"deficit":dd,"prnormalminutes":str(presencenor),"totalheureeffective":str(minuts),"heuretravail_direct":str(travailminutesdirect),"heuretravail_indirect":str(travailminutesindirect),"deficitminutes_total":str(defi),"heureavantsortieminutes":str(heureavantsortie),"retardminutes":str(retard),"iduser":jsondata[0]["iduser"],"absence_defi":str(arrondi_deficit_absence),"last_name":jsondata[0]["last_name"]})
             
         for obj in listmois:
             

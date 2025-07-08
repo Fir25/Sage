@@ -98,7 +98,7 @@ const handleSubmit = (e) => {
                   <div  className="card-body p-md-5 mx-md-4" >
     
                     <div  className="text-center">
-                      <img src="./activecontact.png"
+                      <img src="./logo.png"
                    style={{width:"185px"}}     alt="logo"/>
                 {/**  <h4  className="mt-1 mb-5 pb-1 ">Veuillez vous connecter à votre compte</h4> */}
                 <h4  className="mt-1 mb-5 pb-1 "></h4> 

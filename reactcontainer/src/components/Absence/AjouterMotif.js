@@ -171,7 +171,7 @@ Ajouter une motif
 
 </>
 :""}
-{motifConge==true|| motifdemijournne==true || motifautorisation == true ?
+
 <div className='row pl-3'>
 <div className='col-md-4'>
 <FormControlLabel control={<Checkbox/>} label='Payé' value={justifie} onChange={handleChangeJustifie} />
@@ -179,7 +179,7 @@ Ajouter une motif
 
 
 <FormControlLabel control={<Checkbox/>} label='Justifié' value={congemaladie} onChange={handleChangeMaladie} /></div></div>:""
-}
+
 
 <div className="modal-footer">
   <button type="button" className="btn btn-secondary" data-dismiss="modal">Fermer</button>

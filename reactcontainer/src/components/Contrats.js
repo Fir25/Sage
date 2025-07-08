@@ -13,7 +13,7 @@ const Contratss = () => {
 
   $(document).ready(function () {
    
-    $('#contttadmin').DataTable({
+    $('#contttrh').DataTable({
       language:frdatatable,
       "dom": 'Blfrtip',
       buttons: [
@@ -65,7 +65,7 @@ const userinfo =useSelector(state => state.userinfo);
 
      
       
-        <ScrollContainer>
+        {/* <ScrollContainer> */}
      
    <div className="table-responsive">   <table className="table table-bordered display" id="contttrh">
           <thead className="thead-light">
@@ -114,12 +114,12 @@ const userinfo =useSelector(state => state.userinfo);
           </tbody>
         </table></div>
       
-      </ScrollContainer>
+      {/* </ScrollContainer> */}
     
    
       
         
-        </div> 
+        </div>   
         </div></div></div>}</div>
      );
 }

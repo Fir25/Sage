@@ -12,7 +12,7 @@ function AjouterContrat() {
   const test=userinfo[0]
   if(Object.keys(userinfo).length !=0){ 
    
-   var contratedit=test['"contratsedit"']
+   var contratedit=test['contratsedit']
    var contratdelete=test['admin']
    
     

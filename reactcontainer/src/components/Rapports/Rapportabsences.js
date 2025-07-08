@@ -46,6 +46,11 @@ const[alert,setAlert]=useState(false)
   const[uu,setU]=useState([]) 
 
   const [activite, setActivite] = useState([])
+  const [ligne, setLigne] = useState([]);
+  const [superviseur, setSuperviseur] = useState([]);
+ const [listeligne, setListeLigne] = useState([]);
+ const { data: ligness = [], isloading: loadingLigne, error: errorLigne } = useFetch(url + "listligne");
+ const { data: superviseurs = [], isloading: loadingSuperviseur, error: errorSuperviseur } = useFetch(url + "listsuperviseur");
   const activities = [
     { "label": "activité", "value": "1" },
     { "label": "Suspendu", "value": "0" }
@@ -54,13 +59,17 @@ const[alert,setAlert]=useState(false)
   const { data: sites = [], isloading, error } = useFetch(url+"ListSite_ForSelect/")
   const [iddepar, setIddepar] = useState([])
   const ac = []
+  const lg=[]
+  const si = []
+  const sup = []
  
   useEffect(() => {
     ac.push(activite.map(x => x.value))
-
-
-    fetch(url+"userofdepartements/?id=" + uu+ "&idactivite=" + ac ,
-     {method: 'GET', 
+    si.push(site.map(y => y.value))
+    console.log(ligne)
+    lg.push(ligne.map(l => l.value))
+    sup.push(superviseur.map(s=>s.value))
+    fetch(url+"userofdepartements/?id=" + uu+ "&idactivite=" + ac+"&idligne="+lg +"&idsuperviseur="+sup, {method: 'GET', 
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -79,7 +88,7 @@ const[alert,setAlert]=useState(false)
     
     })
 
-  }, [activite,uu])
+  }, [activite, site,ligne,superviseur ,uu])
 
   const [selectedd, setSelectedd] = useState([]);
   const arr=[]
@@ -127,18 +136,21 @@ const[alert,setAlert]=useState(false)
       setAlert(false)
       if(loginemploye==false){ 
         arr.push(selectedd.map(x=>x.value))
-        fetch(url+"rapportabsence/" + date1 + "/" + date2 + "/?id=" + arr, {method: 'GET', 
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          Authorization: token,
-        }}).then((result) => {
+        fetch(url+"rapportabsence/" +date1+"/"+date2+"/" , {method: 'POST', 
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: token,
+          },
+          body: JSON.stringify({ ids: arr }), // Envoie les IDs dans le body
+        }).then((result) => {
+          result.json().then((resp) => { 
 
 /**          if ( result.status===401) {
             logoutfunction(result.status)
           } */
       
-          result.json().then((resp) => {
+          
             setPost(true)
           setData(resp)
           setOpenn(false)
@@ -323,7 +335,18 @@ console.log(data)
       
       
                     </div>
-       
+                    
+                    { <div className="col-md-3">
+                <label>Ligne </label>
+                <MultiSelect  options={ligness}  value={ligne}  onChange={setLigne}  />
+
+              </div> }
+              
+              { <div className="col-md-3">
+                <label>Superviseur </label>
+                <MultiSelect  options={superviseurs}  value={superviseur}  onChange={setSuperviseur}  />
+
+              </div> }
 
 
    

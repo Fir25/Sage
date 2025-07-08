@@ -147,7 +147,7 @@ const [ajoutcontrats,setajoutcontrat]=useState({'démarrageContrat':'','datefin'
        
        
          "matriculecnss": user.matriculecnss,
-        // "sex": user.sex,
+        "sex": user.sex,
         // "datedemarrage": user.datedemarrage,
         
        
@@ -219,11 +219,13 @@ const [ajoutcontrats,setajoutcontrat]=useState({'démarrageContrat':'','datefin'
   const classes = useStyle()
 
   const { data: roles, isloading: hh, error: hr } = useFetch(url + "role/")
-
+ const { data: superviseurs, isloading:su, error:sup } = useFetch(url+"listsuperviseur/") 
+    const { data: skill, isloading:sk, error:ski } = useFetch(url+"listskill/") 
   const { data: plannings, isloading: lo, error: err } = useFetch(url + "planning/")
   const { data: TypesContrat = [], ll, oo } = useFetch(url + 'contrats/')
 
   const [r, setR] = useState('')
+  const [s, setS] = useState('')
   const [motifparti, setMotifParti] = useState('')
   const [userId, setUserId] = useState(null)
 
@@ -303,16 +305,16 @@ console.log('planningemp',resp.planningemp,typeof(resp.planningemp))
 
   }
 
-  const isAllSelected = plannings.length > 0 && planningemp.length === plannings.length;
-  const handleChange = (event) => {
-    const value = event.target.value;
-    if (value[value.length - 1] === "all") {
-      setPlaningEmp(planningemp.length === plannings.length ? [] : plannings.map(x => x.id));
-      return;
-    }
+  // const isAllSelected = plannings.length > 0 && planningemp.length === plannings.length;
+  // const handleChange = (event) => {
+  //   const value = event.target.value;
+  //   if (value[value.length - 1] === "all") {
+  //     setPlaningEmp(planningemp.length === plannings.length ? [] : plannings.map(x => x.id));
+  //     return;
+  //   }
 
-    setPlaningEmp(value);
-  };
+  //   setPlaningEmp(value);
+  // };
 
   const DeleteUser = (userId) => {
     fetch(url + 'userdelete/' + userId, {
@@ -416,9 +418,6 @@ const handleChangeDemarageContrat=(event)=>{
           idcontrat: datauser.idcontrat,
           password: datauser.password,
 
-
-
-
           validite_preavis: datauser.validite_preavis,
           commentaire: datauser.commentaire,
           teletravail: datauser.teletravail,
@@ -429,8 +428,43 @@ const handleChangeDemarageContrat=(event)=>{
           contrat:contratsList,
           ajoutcontrats:ajoutcontrats,
           matriculepaie:datauser.matriculepaie,
-          global:datauser.globale,
-          soldemaladie:datauser.soldemaladie
+          // global:datauser.globale,
+          soldemaladie:datauser.soldemaladie,
+          superviseur: datauser.superviseur,
+          skill : datauser.skill,
+          poste: datauser.poste,
+          type_de_travail: datauser.type_de_travail,
+          fonction_fiche_de_paie: datauser.fonction_fiche_de_paie,
+          date_titularisation: datauser.date_titularisation,
+          nbre_jours_restants_echeance: datauser.nbre_jours_restants_echeance,
+          motif_depart: datauser.motif_depart,
+          type_depart: datauser.type_depart,
+          premier_contrat_sage_tunisia: datauser.premier_contrat_sage_tunisia,
+          mois_embauche: datauser.mois_embauche,
+          annee_embauche: datauser.annee_embauche,
+          annee_titularisation: datauser.annee_titularisation,
+          tranche_anciennete: datauser.tranche_anciennete,
+          cle_cnss: datauser.cle_cnss,
+          date_delivrance_cin: datauser.date_delivrance_cin,
+          situation_familiale: datauser.situation_familiale,
+          niveau_scolaire: datauser.niveau_scolaire,
+          categorie: datauser.categorie,
+          echelon: datauser.echelon,
+          prochaine_date_echelon: datauser.prochaine_date_echelon,
+          type_salaire: datauser.type_salaire,
+          cout_horaire: datauser.cout_horaire,
+          rib_bancaire: datauser.rib_bancaire,
+          banque: datauser.banque,
+          adresse: datauser.adresse,
+          commune: datauser.commune,
+          code_postal: datauser.code_postal,
+          visite_medicale: datauser.visite_medicale,
+          telephone_contact_famille: datauser.telephone_contact_famille,
+          bien_de_la_societe: datauser.bien_de_la_societe,
+          destination: datauser.destination,
+          departement_bulletin: datauser.departement_bulletin,
+
+          
         })
       }).then((response) => {
 
@@ -538,6 +572,283 @@ const handleChangeDemarageContrat=(event)=>{
           Mouchard(datausermouchard.nomsit == null ? "vide" : datausermouchard.nomsit, sittee == "" ? "vide" : sittee, userId, iduserinfo, "Modifier le site")
 
         }
+        if (datausermouchard.superviseur !== datauser.superviseur) {
+          Mouchard(
+              datausermouchard.superviseur === "" ? "vide" : datausermouchard.superviseur, 
+              datauser.superviseur === "" ? "vide" : datauser.superviseur, 
+              userId, iduserinfo, 
+              "Modifier Superviseur"
+          );
+      }
+      
+      if (datausermouchard.poste !== datauser.poste) {
+          Mouchard(
+              datausermouchard.poste === "" ? "vide" : datausermouchard.poste, 
+              datauser.poste === "" ? "vide" : datauser.poste, 
+              userId, iduserinfo, 
+              "Modifier Poste"
+          );
+      }
+      
+      if (datausermouchard.type_de_travail !== datauser.type_de_travail) {
+          Mouchard(
+              datausermouchard.type_de_travail === "" ? "vide" : datausermouchard.type_de_travail, 
+              datauser.type_de_travail === "" ? "vide" : datauser.type_de_travail, 
+              userId, iduserinfo, 
+              "Modifier Type de travail"
+          );
+      }
+      
+      if (datausermouchard.fonction_fiche_de_paie !== datauser.fonction_fiche_de_paie) {
+          Mouchard(
+              datausermouchard.fonction_fiche_de_paie === "" ? "vide" : datausermouchard.fonction_fiche_de_paie, 
+              datauser.fonction_fiche_de_paie === "" ? "vide" : datauser.fonction_fiche_de_paie, 
+              userId, iduserinfo, 
+              "Modifier Fonction fiche de paie"
+          );
+      }
+      
+      if (datausermouchard.nbre_jours_restants_echeance !== datauser.nbre_jours_restants_echeance) {
+          Mouchard(
+              datausermouchard.nbre_jours_restants_echeance === "" ? "vide" : datausermouchard.nbre_jours_restants_echeance, 
+              datauser.nbre_jours_restants_echeance === "" ? "vide" : datauser.nbre_jours_restants_echeance, 
+              userId, iduserinfo, 
+              "Modifier Nombre de jours restants pour l'échéance"
+          );
+      }
+      
+      if (datausermouchard.motif_depart !== datauser.motif_depart) {
+          Mouchard(
+              datausermouchard.motif_depart === "" ? "vide" : datausermouchard.motif_depart, 
+              datauser.motif_depart === "" ? "vide" : datauser.motif_depart, 
+              userId, iduserinfo, 
+              "Modifier Motif de départ"
+          );
+      }
+      
+      if (datausermouchard.type_depart !== datauser.type_depart) {
+          Mouchard(
+              datausermouchard.type_depart === "" ? "vide" : datausermouchard.type_depart, 
+              datauser.type_depart === "" ? "vide" : datauser.type_depart, 
+              userId, iduserinfo, 
+              "Modifier Type de départ"
+          );
+      }
+      
+      if (datausermouchard.premier_contrat_sage_tunisia !== datauser.premier_contrat_sage_tunisia) {
+          Mouchard(
+              datausermouchard.premier_contrat_sage_tunisia === "" ? "vide" : datausermouchard.premier_contrat_sage_tunisia, 
+              datauser.premier_contrat_sage_tunisia === "" ? "vide" : datauser.premier_contrat_sage_tunisia, 
+              userId, iduserinfo, 
+              "Modifier Premier contrat Sage Tunisia"
+          );
+      }
+      
+      if (datausermouchard.mois_embauche !== datauser.mois_embauche) {
+          Mouchard(
+              datausermouchard.mois_embauche === "" ? "vide" : datausermouchard.mois_embauche, 
+              datauser.mois_embauche === "" ? "vide" : datauser.mois_embauche, 
+              userId, iduserinfo, 
+              "Modifier Mois d'embauche"
+          );
+      }
+      
+      if (datausermouchard.annee_embauche !== datauser.annee_embauche) {
+          Mouchard(
+              datausermouchard.annee_embauche === "" ? "vide" : datausermouchard.annee_embauche, 
+              datauser.annee_embauche === "" ? "vide" : datauser.annee_embauche, 
+              userId, iduserinfo, 
+              "Modifier Année d'embauche"
+          );
+      }
+      
+      if (datausermouchard.annee_titularisation !== datauser.annee_titularisation) {
+          Mouchard(
+              datausermouchard.annee_titularisation === "" ? "vide" : datausermouchard.annee_titularisation, 
+              datauser.annee_titularisation === "" ? "vide" : datauser.annee_titularisation, 
+              userId, iduserinfo, 
+              "Modifier Année de titularisation"
+          );
+      }
+      
+      if (datausermouchard.tranche_anciennete !== datauser.tranche_anciennete) {
+          Mouchard(
+              datausermouchard.tranche_anciennete === "" ? "vide" : datausermouchard.tranche_anciennete, 
+              datauser.tranche_anciennete === "" ? "vide" : datauser.tranche_anciennete, 
+              userId, iduserinfo, 
+              "Modifier Tranche d'ancienneté"
+          );
+      }
+      
+      if (datausermouchard.cle_cnss !== datauser.cle_cnss) {
+          Mouchard(
+              datausermouchard.cle_cnss === "" ? "vide" : datausermouchard.cle_cnss, 
+              datauser.cle_cnss === "" ? "vide" : datauser.cle_cnss, 
+              userId, iduserinfo, 
+              "Modifier Clé CNSS"
+          );
+      }
+      
+      if (datausermouchard.date_delivrance_cin !== datauser.date_delivrance_cin) {
+          Mouchard(
+              datausermouchard.date_delivrance_cin === "" ? "vide" : datausermouchard.date_delivrance_cin, 
+              datauser.date_delivrance_cin === "" ? "vide" : datauser.date_delivrance_cin, 
+              userId, iduserinfo, 
+              "Modifier Date de délivrance CIN"
+          );
+      }
+      
+      if (datausermouchard.situation_familiale !== datauser.situation_familiale) {
+          Mouchard(
+              datausermouchard.situation_familiale === "" ? "vide" : datausermouchard.situation_familiale, 
+              datauser.situation_familiale === "" ? "vide" : datauser.situation_familiale, 
+              userId, iduserinfo, 
+              "Modifier Situation familiale"
+          );
+      }
+      
+      if (datausermouchard.niveau_scolaire !== datauser.niveau_scolaire) {
+          Mouchard(
+              datausermouchard.niveau_scolaire === "" ? "vide" : datausermouchard.niveau_scolaire, 
+              datauser.niveau_scolaire === "" ? "vide" : datauser.niveau_scolaire, 
+              userId, iduserinfo, 
+              "Modifier Niveau scolaire"
+          );
+      }
+      
+      if (datausermouchard.categorie !== datauser.categorie) {
+          Mouchard(
+              datausermouchard.categorie === "" ? "vide" : datausermouchard.categorie, 
+              datauser.categorie === "" ? "vide" : datauser.categorie, 
+              userId, iduserinfo, 
+              "Modifier Catégorie"
+          );
+      }
+      if (datausermouchard.echelon !== datauser.echelon) {
+        Mouchard(
+            datausermouchard.echelon === "" ? "vide" : datausermouchard.echelon, 
+            datauser.echelon === "" ? "vide" : datauser.echelon, 
+            userId, iduserinfo, 
+            "Modifier Echelon"
+        );
+    }
+    
+    if (datausermouchard.prochaine_date_echelon !== datauser.prochaine_date_echelon) {
+        Mouchard(
+            datausermouchard.prochaine_date_echelon === "" ? "vide" : datausermouchard.prochaine_date_echelon, 
+            datauser.prochaine_date_echelon === "" ? "vide" : datauser.prochaine_date_echelon, 
+            userId, iduserinfo, 
+            "Modifier Prochaine date d'échelon"
+        );
+    }
+    
+    if (datausermouchard.type_salaire !== datauser.type_salaire) {
+        Mouchard(
+            datausermouchard.type_salaire === "" ? "vide" : datausermouchard.type_salaire, 
+            datauser.type_salaire === "" ? "vide" : datauser.type_salaire, 
+            userId, iduserinfo, 
+            "Modifier Type de salaire"
+        );
+    }
+    
+    if (datausermouchard.cout_horaire !== datauser.cout_horaire) {
+        Mouchard(
+            datausermouchard.cout_horaire === "" ? "vide" : datausermouchard.cout_horaire, 
+            datauser.cout_horaire === "" ? "vide" : datauser.cout_horaire, 
+            userId, iduserinfo, 
+            "Modifier Coût horaire"
+        );
+    }
+    
+    if (datausermouchard.rib_bancaire !== datauser.rib_bancaire) {
+        Mouchard(
+            datausermouchard.rib_bancaire === "" ? "vide" : datausermouchard.rib_bancaire, 
+            datauser.rib_bancaire === "" ? "vide" : datauser.rib_bancaire, 
+            userId, iduserinfo, 
+            "Modifier RIB bancaire"
+        );
+    }
+    
+    if (datausermouchard.banque !== datauser.banque) {
+        Mouchard(
+            datausermouchard.banque === "" ? "vide" : datausermouchard.banque, 
+            datauser.banque === "" ? "vide" : datauser.banque, 
+            userId, iduserinfo, 
+            "Modifier Banque"
+        );
+    }
+    
+    if (datausermouchard.adresse !== datauser.adresse) {
+        Mouchard(
+            datausermouchard.adresse === "" ? "vide" : datausermouchard.adresse, 
+            datauser.adresse === "" ? "vide" : datauser.adresse, 
+            userId, iduserinfo, 
+            "Modifier Adresse"
+        );
+    }
+    
+    if (datausermouchard.commune !== datauser.commune) {
+        Mouchard(
+            datausermouchard.commune === "" ? "vide" : datausermouchard.commune, 
+            datauser.commune === "" ? "vide" : datauser.commune, 
+            userId, iduserinfo, 
+            "Modifier Commune"
+        );
+    }
+    
+    if (datausermouchard.code_postal !== datauser.code_postal) {
+        Mouchard(
+            datausermouchard.code_postal === "" ? "vide" : datausermouchard.code_postal, 
+            datauser.code_postal === "" ? "vide" : datauser.code_postal, 
+            userId, iduserinfo, 
+            "Modifier Code postal"
+        );
+    }
+    
+    if (datausermouchard.visite_medicale !== datauser.visite_medicale) {
+        Mouchard(
+            datausermouchard.visite_medicale === "" ? "vide" : datausermouchard.visite_medicale, 
+            datauser.visite_medicale === "" ? "vide" : datauser.visite_medicale, 
+            userId, iduserinfo, 
+            "Modifier Visite médicale"
+        );
+    }
+    
+    if (datausermouchard.telephone_contact_famille !== datauser.telephone_contact_famille) {
+        Mouchard(
+            datausermouchard.telephone_contact_famille === "" ? "vide" : datausermouchard.telephone_contact_famille, 
+            datauser.telephone_contact_famille === "" ? "vide" : datauser.telephone_contact_famille, 
+            userId, iduserinfo, 
+            "Modifier Téléphone contact familial"
+        );
+    }
+    
+    if (datausermouchard.bien_de_la_societe !== datauser.bien_de_la_societe) {
+        Mouchard(
+            datausermouchard.bien_de_la_societe === "" ? "vide" : datausermouchard.bien_de_la_societe, 
+            datauser.bien_de_la_societe === "" ? "vide" : datauser.bien_de_la_societe, 
+            userId, iduserinfo, 
+            "Modifier Bien de la société"
+        );
+    }
+    
+    if (datausermouchard.destination !== datauser.destination) {
+        Mouchard(
+            datausermouchard.destination === "" ? "vide" : datausermouchard.destination, 
+            datauser.destination === "" ? "vide" : datauser.destination, 
+            userId, iduserinfo, 
+            "Modifier Destination"
+        );
+    }
+    
+    if (datausermouchard.departement_bulletin !== datauser.departement_bulletin) {
+        Mouchard(
+            datausermouchard.departement_bulletin === "" ? "vide" : datausermouchard.departement_bulletin, 
+            datauser.departement_bulletin === "" ? "vide" : datauser.departement_bulletin, 
+            userId, iduserinfo, 
+            "Modifier Département bulletin"
+        );
+    }
 
 
       }).then((res) => {
@@ -665,7 +976,7 @@ const handleChangeDemarageContrat=(event)=>{
                   <div className="table-responsive" >
 
 
-                    <table id="example" className="display">
+<table id="example" className="display">
                       <thead className="thead-light">
                         <tr>
                           <th className='text-center'>Employé</th>
@@ -700,7 +1011,7 @@ const handleChangeDemarageContrat=(event)=>{
                       </thead>
                       <tbody>
 
-                        {users.filter(x=>x.is_active==true).map(us =>
+                        {users.map(us =>
 
                           <>
                             <tr>
@@ -708,7 +1019,7 @@ const handleChangeDemarageContrat=(event)=>{
                                <td>{us.matricule}</td>
                               <td  >{us.role}</td>
                              
-                              <td>{us.activite ? "en activité" : "suspendu"}</td>
+                              <td>{us.is_active ? "en activité" : "suspendu"}</td>
                               <td>{us.Nomarbo}</td>
                               <td hidden>{ us.typepaie ? "Forfaitaire " : "Non Forfaitaire "}</td>
 
@@ -915,7 +1226,8 @@ const handleChangeDemarageContrat=(event)=>{
                      
                    </div>
                  </div>
-                 <div className="col-md-4">
+                 </div>
+                 {/* <div className="col-md-4">
                    <div className="form-group">
                    <label >Globale</label>
 
@@ -925,8 +1237,8 @@ const handleChangeDemarageContrat=(event)=>{
 
                      
                    </div>
-                 </div>
-                          </div>
+                 </div> */}
+                          
                           <div className="row">
 
 
@@ -1089,7 +1401,7 @@ const handleChangeDemarageContrat=(event)=>{
                               </TextField >
 
                             </div>
-                            <div className='col-md-4'>
+                            {/* <div className='col-md-4'>
                               <label >Planning</label>
                               <FormControl className={classes.formControl}>
                                 <InputLabel id="mutiple-select-label">Sélectionnez des planings</InputLabel>
@@ -1116,11 +1428,11 @@ const handleChangeDemarageContrat=(event)=>{
                                   >
                                     <ListItemIcon>
                                       <Checkbox
-                                        classes={{ indeterminate: classes.indeterminateColor }}
-                                        checked={isAllSelected}
-                                        indeterminate={
-                                          planningemp.length > 0 && planningemp.length < plannings.length
-                                        }
+                                        // classes={{ indeterminate: classes.indeterminateColor }}
+                                        // checked={isAllSelected}
+                                        // indeterminate={
+                                        //   planningemp.length > 0 && planningemp.length < plannings.length
+                                        // }
                                       />
                                     </ListItemIcon>
                                     <ListItemText
@@ -1140,29 +1452,287 @@ const handleChangeDemarageContrat=(event)=>{
                               </FormControl>
 
 
-                            </div>
+                            </div> */}
                           </div>
+                          <div className='row'>
+  <div className="col-md-4">
+     
+                              <label >Superviseur</label>
+                              <TextField
+                                id="outlined-select-currency"
+                                select
+                                label="role"
+                                value={datauser.superviseur || ""}
+                                onChange={(e) => { setDataUser({ ...datauser, superviseur: e.target.value }) }}
+                                helperText="Svp sélectionnez un role"
+                                margin='normal'
+                                fullWidth
+                              >
+                                {superviseurs.map((option) => (
+                                  <MenuItem key={option.superviseur} value={option.id} onClick={(e) => { setS(e.target.innerText) }} >
+                                    {option.superviseur}
+                                  </MenuItem>
+                                ))}
+                              </TextField >
+
+                            
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Poste</label>
+      <input className="form-control" placeholder="Poste" value={datauser.poste} onChange={(e) => { setDataUser({ ...datauser, poste: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Type de Travail</label>
+      <input className="form-control" placeholder="Type de travail" value={datauser.type_de_travail} onChange={(e) => { setDataUser({ ...datauser, type_de_travail: e.target.value }) }} />
+    </div>
+  </div>
+</div>
+
+<div className='row'>
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Fonction / Fiche de Paie</label>
+      <input className="form-control" placeholder="Fonction" value={datauser.fonction_fiche_de_paie} onChange={(e) => { setDataUser({ ...datauser, fonction_fiche_de_paie: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Date de Titularisation</label>
+      <input className="form-control" placeholder="Date de titularisation" value={datauser.date_titularisation} onChange={(e) => { setDataUser({ ...datauser, date_titularisation: e.target.value }) }} type="date" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Nombre de jours restants pour l'échéance</label>
+      <input className="form-control" placeholder="Nombre de jours restants" value={datauser.nbre_jours_restants_echeance} onChange={(e) => { setDataUser({ ...datauser, nbre_jours_restants_echeance: e.target.value }) }} type="number" />
+    </div>
+  </div>
+</div>
+
+<div className='row'>
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Motif de départ</label>
+      <input className="form-control" placeholder="Motif de départ" value={datauser.motif_depart} onChange={(e) => { setDataUser({ ...datauser, motif_depart: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Type de départ</label>
+      <input className="form-control" placeholder="Type de départ" value={datauser.type_depart} onChange={(e) => { setDataUser({ ...datauser, type_depart: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>1er Contrat Sage Tunisia</label>
+      <input className="form-control" placeholder="1er Contrat" value={datauser.premier_contrat_sage_tunisia} onChange={(e) => { setDataUser({ ...datauser, premier_contrat_sage_tunisia: e.target.value }) }} />
+    </div>
+  </div>
+</div>
+
+<div className='row'>
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Mois d'embauche</label>
+      <input className="form-control" placeholder="Mois d'embauche" value={datauser.mois_embauche} onChange={(e) => { setDataUser({ ...datauser, mois_embauche: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Année d'embauche</label>
+      <input className="form-control" placeholder="Année d'embauche" value={datauser.annee_embauche} onChange={(e) => { setDataUser({ ...datauser, annee_embauche: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Année de titularisation</label>
+      <input className="form-control" placeholder="Année de titularisation" value={datauser.annee_titularisation} onChange={(e) => { setDataUser({ ...datauser, annee_titularisation: e.target.value }) }} />
+    </div>
+  </div>
+</div>
+
+<div className='row'>
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Tranche d'ancienneté</label>
+      <input className="form-control" placeholder="Tranche d'ancienneté" value={datauser.tranche_anciennete} onChange={(e) => { setDataUser({ ...datauser, tranche_anciennete: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Clé CNSS</label>
+      <input className="form-control" placeholder="Clé CNSS" value={datauser.cle_cnss} onChange={(e) => { setDataUser({ ...datauser, cle_cnss: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Date de délivrance CIN</label>
+      <input className="form-control" placeholder="Date de délivrance CIN" value={datauser.date_delivrance_cin} onChange={(e) => { setDataUser({ ...datauser, date_delivrance_cin: e.target.value }) }} type="date" />
+    </div>
+  </div>
+</div>
+
+<div className='row'>
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Situation familiale</label>
+      <input className="form-control" placeholder="Situation familiale" value={datauser.situation_familiale} onChange={(e) => { setDataUser({ ...datauser, situation_familiale: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Niveau scolaire</label>
+      <input className="form-control" placeholder="Niveau scolaire" value={datauser.niveau_scolaire} onChange={(e) => { setDataUser({ ...datauser, niveau_scolaire: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Catégorie</label>
+      <input className="form-control" placeholder="Catégorie" value={datauser.categorie} onChange={(e) => { setDataUser({ ...datauser, categorie: e.target.value }) }} />
+    </div>
+  </div>
+</div>
+
+<div className='row'>
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Echelon</label>
+      <input className="form-control" placeholder="Echelon" value={datauser.echelon} onChange={(e) => { setDataUser({ ...datauser, echelon: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Prochaine date d'échelon</label>
+      <input className="form-control" placeholder="Prochaine date d'échelon" value={datauser.prochaine_date_echelon} onChange={(e) => { setDataUser({ ...datauser, prochaine_date_echelon: e.target.value }) }} type="date" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Type de salaire</label>
+      <input className="form-control" placeholder="Type de salaire" value={datauser.type_salaire} onChange={(e) => { setDataUser({ ...datauser, type_salaire: e.target.value }) }} />
+    </div>
+  </div>
+</div>
+
+<div className='row'>
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Coût horaire</label>
+      <input className="form-control" placeholder="Coût horaire" value={datauser.cout_horaire} onChange={(e) => { setDataUser({ ...datauser, cout_horaire: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>RIB bancaire</label>
+      <input className="form-control" placeholder="RIB bancaire" value={datauser.rib_bancaire} onChange={(e) => { setDataUser({ ...datauser, rib_bancaire: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Banque</label>
+      <input className="form-control" placeholder="Banque" value={datauser.banque} onChange={(e) => { setDataUser({ ...datauser, banque: e.target.value }) }} />
+    </div>
+  </div>
+</div>
+
+<div className='row'>
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Adresse</label>
+      <input className="form-control" placeholder="Adresse" value={datauser.adresse} onChange={(e) => { setDataUser({ ...datauser, adresse: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Commune</label>
+      <input className="form-control" placeholder="Commune" value={datauser.commune} onChange={(e) => { setDataUser({ ...datauser, commune: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Code postal</label>
+      <input className="form-control" placeholder="Code postal" value={datauser.code_postal} onChange={(e) => { setDataUser({ ...datauser, code_postal: e.target.value }) }} />
+    </div>
+  </div>
+</div>
+
+<div className='row'>
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Visite médicale</label>
+      <input className="form-control" placeholder="Visite médicale" value={datauser.visite_medicale} onChange={(e) => { setDataUser({ ...datauser, visite_medicale: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Numéro de téléphone contact familial</label>
+      <input className="form-control" placeholder="Numéro de téléphone contact familial" value={datauser.num_tel_contact_familial} onChange={(e) => { setDataUser({ ...datauser, num_tel_contact_familial: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Bien de la société</label>
+      <input className="form-control" placeholder="Bien de la société" value={datauser.bien_societe} onChange={(e) => { setDataUser({ ...datauser, bien_societe: e.target.value }) }} />
+    </div>
+  </div>
+</div>
+
+<div className='row'>
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Destination</label>
+      <input className="form-control" placeholder="Destination" value={datauser.destination} onChange={(e) => { setDataUser({ ...datauser, destination: e.target.value }) }} />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <label>Département bulletin</label>
+      <input className="form-control" placeholder="Département bulletin" value={datauser.departement_bulletin} onChange={(e) => { setDataUser({ ...datauser, departement_bulletin: e.target.value }) }} />
+    </div>
+  </div>
+  </div>
                           <div className='row'>
 
                             <div className='col-md-4'>
                               <label >Sexe</label>
                               <div className="form-group">
                                 <TextField
-                                  id="outlined-select-currency"
-                                  select
-                                  label="Sexe"
-                                  value={datauser.sex || ""}
-                                  onChange={(e) => { setDataUser({ ...datauser, sex: e.target.value }) }}
-                                  helperText="Svp sélectionnez sexe"
-                                  margin='normal'
-                                  fullWidth
-                                >
-                                  <MenuItem value={"femme"}>Femme</MenuItem>
-                                  <MenuItem value={"homme"}>Homme</MenuItem>
-
-
-                                </TextField>
-
+                                id="outlined-select-currency"
+                                select
+                                label="Sexe"
+                                value={datauser.sex || ""}
+                                onChange={(e) => setDataUser({ ...datauser, sex: e.target.value })}
+                                helperText="Svp sélectionnez sexe"
+                                margin="normal"
+                                fullWidth
+                              >
+                                <MenuItem value="Femme">Femme</MenuItem>
+                                <MenuItem value="Homme">Homme</MenuItem>
+                              </TextField>
                               </div>
                             </div>
                             <div className='col-md-4'>
@@ -1190,8 +1760,8 @@ const handleChangeDemarageContrat=(event)=>{
                                 id="outlined-select-currency"
                                 select
                                 label="Statut "
-                                value={datauser.activite || ""}
-                                onChange={(e) =>  {setIsActive(e.target.value); setDataUser({ ...datauser, activite: e.target.value }) }}
+                                value={datauser.is_active ? "true" : "false"}
+                                onChange={(e) =>  {setIsActive( e.target.value === "true" ); setDataUser({ ...datauser, is_active: e.target.value === "true" }) }}
                                 helperText="Statut "
                                 margin='normal'
                                 fullWidth
@@ -1204,21 +1774,34 @@ const handleChangeDemarageContrat=(event)=>{
                             </div>
                             <div className='col-md-4'>
                               <label >Type de paie  </label>
-                              <TextField
+                              {/* <TextField
                                 id="outlined-select-currency"
                                 select
                                 label="Type de paie"
                                 value={datauser.typepaie || ""}
-                                onChange={(e) =>  { setDataUser({ ...datauser, activite: e.target.value }) }}
+                                onChange={(e) =>  { setDataUser({ ...datauser, typepaie: e.target.value }) }}
                                 helperText="Type de paie "
                                 margin='normal'
                                 fullWidth
                               >
-                             <MenuItem value={"true"}>Forfaitaire</MenuItem>
-                                      <MenuItem value={"false"}>Non Forfaitaire</MenuItem>
+                             <MenuItem value={true}>Forfaitaire</MenuItem>
+                                      <MenuItem value={false}>Non Forfaitaire</MenuItem>
 
 
-                              </TextField>
+                              </TextField> */}
+                              <TextField
+  id="outlined-select-currency"
+  select
+  label="Type de paie"
+  value={datauser.typepaie ? "true" : "false"} // Display string representation
+  onChange={(e) => setDataUser({ ...datauser, typepaie: e.target.value === "true" })} // Convert string to boolean
+  helperText="Type de paie"
+  margin="normal"
+  fullWidth
+>
+  <MenuItem value="true">Forfaitaire</MenuItem>
+  <MenuItem value="false">Non Forfaitaire</MenuItem>
+</TextField>
                             </div>
                           </div>
 
@@ -1537,12 +2120,77 @@ const handleChangeDemarageContrat=(event)=>{
 
 
                               </div>
+                              <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Superviseur : {datauser.superviseur}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Poste : {datauser.poste}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Type de travail : {datauser.type_de_travail}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Fonction/Fiche de Paie : {datauser.fonction_fiche_de_paie}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Date de titularisation : {datauser.date_titularisation}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Nb jours restants échéance : {datauser.nbre_jours_restants_echeance}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Motif de départ : {datauser.motif_depart}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Type de départ : {datauser.type_depart}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>1er contrat Sage Tunisia : {datauser.premier_contrat_sage_tunisia}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Mois d'embauche : {datauser.mois_embauche}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Année d'embauche : {datauser.annee_embauche}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Année de titularisation : {datauser.annee_titularisation}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Tranche d'ancienneté : {datauser.tranche_anciennete}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Clé CNSS : {datauser.cle_cnss}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Date de délivrance CIN : {datauser.date_delivrance_cin}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Situation familiale : {datauser.situation_familiale}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Niveau scolaire : {datauser.niveau_scolaire}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Catégorie : {datauser.categorie}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Échelon : {datauser.echelon}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Prochaine date d'échelon : {datauser.prochaine_date_echelon}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Type de salaire : {datauser.type_salaire}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Coût horaire : {datauser.cout_horaire}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>RIB bancaire : {datauser.rib_bancaire}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Banque : {datauser.banque}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Adresse : {datauser.adresse}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Commune : {datauser.commune}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Code postal : {datauser.code_postal}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Visite médicale : {datauser.visite_medicale}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Numéro de téléphone contact familial : {datauser.telephone_contact_famille}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Bien de la société : {datauser.bien_de_la_societe}</div>
+    </div>
+    <div className="row border border-dark">
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Destination : {datauser.destination}</div>
+      <div className="col-6 border border-dark" style={{ height: "50px" }}>Département bulletin : {datauser.departement_bulletin}</div>
+    </div>
+  </div>
 
 
 
 
 
-                            </div>
+                            
                             <div className="container pt-5">
 
                               <h2>Ressources humaines (RH)</h2>

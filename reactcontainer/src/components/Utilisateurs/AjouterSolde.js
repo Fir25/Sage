@@ -25,7 +25,7 @@ const AjouterSolde = () => {
     const [employes, setEmployes] = useState('');
 const [commentaire,setCommentaire]=useState('')
 const[soldeactuelle,setSoldeActuelle]=useState('')
-    const { data: employees, isloading: zz, error: ee } = useFetch(url+"user/")
+    const { data: employees, isloading: zz, error: ee } = useFetch(url+"userselect/")
    
    
  const token = localStorage.getItem('access_token') ? 'Bearer ' +localStorage.getItem('access_token') :null
@@ -94,7 +94,7 @@ const[soldeactuelle,setSoldeActuelle]=useState('')
                                 <Autocomplete
 
 options={employees}
-getOptionLabel={(option) => option.user_name + "  " + option.last_name || ""}
+getOptionLabel={(option) => option.label  || ""}
 
 renderInput={(params) => (
     <TextField {...params} label="employe" variant="outlined" />

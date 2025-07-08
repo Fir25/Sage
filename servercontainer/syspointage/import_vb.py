@@ -1,4 +1,5 @@
 from . rapport_journalier import Rapportunjour
+from . rapport_journal import Rapportunjoure
 from rest_framework.views import APIView
 from . calcul_func import *
 from datetime import datetime
@@ -30,7 +31,7 @@ class Rapportpaie(APIView):
                 heureferie=0
                 jourtravail=0
                 for single_date in daterange(datetime.strptime(d1,"%Y-%m-%d").date(), datetime.strptime(d2,"%Y-%m-%d").date()):       
-                    a=Rapportunjour(int(i),str(single_date)) 
+                    a=Rapportunjoure(int(i),str(single_date)) 
                     print(single_date.weekday())   
                     
                     if a:
@@ -71,7 +72,18 @@ class Rapportpaie(APIView):
                               if datetime.strptime(heurestravail, '%H:%M')  >= datetime.strptime('07:00', '%H:%M'):
                                   ticketrestau+=1
                        
-                jsondata.append({ "user_name": i,"heuretheorique": minutes_hours(jourtravail*480 - (joursferie*480)) ,"plannifagent": minutes_hours(heuretheorique - heureferie  ) , "heuretravaille": minutes_hours( heuretravaille ), "conge":minutes_hours(conge), "ht" : minutes_hours(heuretravai) ,"heureabs": minutes_hours(heureabs ), "presence": presencenrml , "motif":a[0]["motif"], "user_name": a[0]["user_name"], "matricule":a[0]["matricule"], 'heuretravail': minutes_hours(float(a[0]["heuretravail"])), 'pause': a[0]["pause"],'presencenormal': minutes_hours(float(a[0]['presencenormal']))  ,"jourtravaille":a[0]['jourtravaille'],"heureauthorisation": minutes_hours(float(a[0]['heureauthorisation'])),"deficit": minutes_hours(float(a[0]["deficit"])),"iduser":a[0]["iduser"],"tempabsence": minutes_hours(float(a[0]["tempabsence"])),"jourconge":a[0]["jourconge"],"tempsMission": minutes_hours(float(a[0]["tempsMission"])),"tempsconge": minutes_hours(float(a[0]['tempsconge'])),"last_name":a[0]['last_name'],"heuretravailbrute":minutes_hours(float(a[0]['heuretravailbrute'])),"retardmidi":minutes_hours(float(a[0]['retardmidi'])) , "restau" : ticketrestau , "jrfr" : joursferie , "plannif" : day , "heure25" : minutes_hours(heuresup25)  , "heuresup50" : minutes_hours(heuresup50) , "departement" : a[0]['departement'] , "typepaie" : a[0]['typepaie']})          
+                jsondata.append({ "user_name": i,"heuretheorique": minutes_hours(jourtravail*480 - (joursferie*480)) ,"plannifagent": minutes_hours(heuretheorique - heureferie  ) ,
+                "heuretravaille": minutes_hours( heuretravaille ), "conge":minutes_hours(conge), "ht" : minutes_hours(heuretravai) ,
+                "heureabs": minutes_hours(heureabs ), "presence": presencenrml , "motif":a[0]["motif"], "user_name": a[0]["user_name"],
+                 "matricule":a[0]["matricule"],
+                'heuretravail': minutes_hours(float(a[0]["heuretravail"])), 'pause': a[0]["pause"],
+                'presencenormal': minutes_hours(float(a[0]['presencenormal']))  ,"jourtravaille":a[0]['jourtravaille'],
+                "heureauthorisation": minutes_hours(float(a[0]['heureauthorisation'])),"deficit": minutes_hours(float(a[0]["deficit"])),
+                "iduser":a[0]["iduser"],"tempabsence": minutes_hours(float(a[0]["tempabsence"])),"jourconge":a[0]["jourconge"],
+                "tempsMission": minutes_hours(float(a[0]["tempsMission"])),"tempsconge": minutes_hours(float(a[0]['tempsconge'])),
+                "last_name":a[0]['last_name'],"heuretravailbrute":minutes_hours(float(a[0]['heuretravailbrute'])),
+                "retardmidi":minutes_hours(float(a[0]['retardmidi'])) , "restau" : ticketrestau , "jrfr" : joursferie , 
+                "plannif" : day , "heure25" : minutes_hours(heuresup25)  , "heuresup50" : minutes_hours(heuresup50) })          
               
               
         return JsonResponse(jsondata, safe=False)

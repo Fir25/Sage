@@ -3,7 +3,7 @@ import threading
 from django.http import HttpResponse,JsonResponse
 from . rapport_journalier import Rapportunjour
 from rest_framework.views import APIView
-from . calcul_func import *
+from . calcul_func import * 
 from datetime import datetime
 from django.http import HttpResponse,JsonResponse
 import calendar
@@ -15,6 +15,8 @@ import time
 from django.views.decorators.csrf import csrf_exempt
 from django.template import loader
 from . rapport_mensuel import rapportmensul
+from zk import ZK
+import threading
 #scheduler
 def run_continuously(self, interval=1):
 
@@ -314,3 +316,75 @@ def AjoutSolde():
 schesolde = Scheduler()
 schesolde.every().day.at("00:01").do(AjoutSolde)
 schesolde.run_continuously()
+def download_all_attendances():
+    with connection.cursor() as cursor:
+        # Récupérer toutes les pointeuses
+        cursor.execute("SELECT adresse_ip, port, id FROM syspointage_pointeuse")
+        pointeuses = cursor.fetchall()
+        
+        for pointeuse in pointeuses:
+            ip_address, port, pointeuse_id = pointeuse
+            zk = ZK(ip_address, port=int(port), timeout=65, force_udp=False, ommit_ping=True)
+            
+            try:
+                conn = zk.connect()
+                attendances = conn.get_attendance()
+                print(attendances)
+                
+                for single in attendances:
+                    att = str(single).split()
+                    
+                    if att[3] and att[4]:
+                        pointagedate = att[3] + " " + att[4]
+                        matricule = att[1]
+                        
+                        try:
+                            # Vérifier que le matricule est numérique
+                            int(matricule)
+                            
+                            # Vérifier si l'employé existe
+                            cursor.execute(
+                                "SELECT id FROM syspointage_newuser WHERE matricule_p = %s", [matricule]
+                            )
+                            user_result = cursor.fetchone()
+                            
+                            if user_result:
+                                # Vérifier si le pointage existe déjà
+                                cursor.execute("""
+                                    SELECT id FROM syspointage_pointage
+                                    WHERE date_pointage = %s AND employes_id = %s
+                                """, [pointagedate, user_result[0]])
+                                existing_attendance = cursor.fetchone()
+                                
+                                if not existing_attendance: 
+                                    # Insérer le pointage
+                                    cursor.execute("""
+                                        INSERT INTO syspointage_pointage (date_pointage, employes_id, pointeuse_id)
+                                        VALUES (%s, %s, %s)
+                                    """, [pointagedate, user_result[0], pointeuse_id])
+                                    connection.commit()
+                              #       print("Nouveau pointage ajouté")
+                              #   else:
+                              #       print("Pointage existant")
+                        except ValueError:
+                            print(f"Matricule invalide : {matricule}")
+                
+                # Supprimer les pointages après insertion
+                
+
+                conn.disconnect()
+            except Exception as e:
+                print(f"Échec de connexion à la pointeuse {ip_address}:{port} - {e}")
+def run_scheduler_continuously(scheduler):
+    while True:
+        scheduler.run_pending()
+        time.sleep(60)  # Vérifier toutes les minutes si une tâche est planifiée
+
+# Initialisation du scheduler
+schedulepointage = Scheduler()
+schedulepointage.every(1).hours.do(download_all_attendances)
+
+# Lancer le scheduler dans un thread séparé
+scheduler_thread = threading.Thread(target=run_scheduler_continuously, args=(schedulepointage,), daemon=True)
+scheduler_thread.start()
+        
