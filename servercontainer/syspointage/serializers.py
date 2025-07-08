@@ -18,7 +18,6 @@ class PlanningSerializer(serializers.ModelSerializer) :
                  'end' ,
                  'plantravail',
                  'created_at',
-                 'employe',
         ]  
 class arborenscenceSerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
@@ -41,7 +40,30 @@ class arborenscenceSerializer(serializers.ModelSerializer):
         children = arborescence.objects.filter(parent=obj)
         serializer = arborenscenceSerializer(children, many=True)
         return serializer.data
-        
+class superviseurSerializer(serializers.ModelSerializer) : 
+    class Meta : 
+        model = superviseur
+        fields = [
+                'id',
+                'superviseurname',
+               
+        ]
+class skillSerializer(serializers.ModelSerializer) : 
+    class Meta : 
+        model = skill
+        fields = [
+                'id',
+                'skillname',
+               
+        ]
+class ligneSerializer(serializers.ModelSerializer) : 
+    class Meta : 
+        model = ligne
+        fields = [
+                'id',
+                'lignename',
+               
+        ]
 class SiteSerializer(serializers.ModelSerializer) : 
     class Meta : 
         model = Site
@@ -77,7 +99,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
          'matricule', 
          'role',
          'sex',
-         'planningemp',
          'matriculecnss',
          'datedemarrage',
          #'datefin',
@@ -87,7 +108,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
          'idcontrat',
          'datedenaissance',
          'CIN' ,
-         'nbEnfants',
+         'nbenfants',
          'tel' ,
          'commentaire',
          'is_staff', 
@@ -113,8 +134,53 @@ class CustomUserSerializer(serializers.ModelSerializer):
          'globale',
          'soldemaladie',
          'contrat',
-         'typepaie'
-         
+         'typepaie',
+         'intitule_etablissement',
+         'civilite',
+         'ligne_de_production',
+         'superviseur',
+         'poste',
+         'type_de_travail',
+         'categorie_sage_fc',
+         'fonction_fiche_de_paie',
+         'date_titularisation',
+         'nbre_jours_restants_echeance',
+         'date_depart_societe',
+         'type_depart',
+         'type_contrat',
+         'statut',
+         'date_debut_contrat_cdd',
+         'date_fin_contrat_cdd',
+         'date_debut_contrat_caip',
+         'date_fin_contrat_caip',
+         'premier_contrat_sage_tunisia',
+         'mois_embauche',
+         'annee_embauche',
+         'annee_titularisation',
+         'anciennete',
+         'tranche_anciennete',
+         'age',
+         'tranche_age',
+         'cnss',
+         'date_delivrance_cin',
+         'niveau_scolaire',
+         'categorie',
+         'echelon',
+         'prochaine_date_echelon',
+         'type_salaire',
+         'cout_h',
+         'rib_banquaire',
+         'banque',
+         'rib_virement',
+         'verif_nbr_rib',
+         'adresse',
+         'commune',
+         'code_postale',
+         'visite_medicale',
+         'telephone_contact_fam',
+         'bien_de_la_societe',
+         'destination',
+         'departement_bulletin',
 
         
 
@@ -263,33 +329,35 @@ class pointeusesSerializer(serializers.ModelSerializer) :
                 'adresse_ip', 
                 'SIV', 
                 'port',
+                'etat',
         ]  
-class PointageSerializer(serializers.ModelSerializer) : 
-     pointeusename = serializers.CharField( source='pointeuse.nom_pointeuse' ,  read_only=True)
-     employe=serializers.CharField( source='employes.user_name' ,  read_only=True)
-     matricule=serializers.CharField( source='employes.matricule' ,  read_only=True)
-     last_name=serializers.CharField( source='employes.last_name' ,  read_only=True)
-     pause=serializers.CharField( source='idpause.nom' ,  read_only=True)
-     class Meta : 
+class PointageSerializer(serializers.ModelSerializer):
+    pointeusename = serializers.CharField(source='pointeuse.nom_pointeuse', read_only=True)
+    employe = serializers.CharField(source='employes.user_name', read_only=True)
+    matricule = serializers.CharField(source='employes.matricule', read_only=True)
+    last_name = serializers.CharField(source='employes.last_name', read_only=True)
+    pause = serializers.CharField(source='idpause.nom', read_only=True)
+
+    # Ajout pour rendre "employes" writable (clé étrangère vers NewUser)
+    employes = serializers.PrimaryKeyRelatedField(queryset=NewUser.objects.all())
+
+    class Meta:
         model = pointage
         fields = [
-    'id',
-    'pointeuse' ,
-    'pointeusename',
-    'date_pointage', 
-    'employes',
-    'employe',
-    'matricule',
-    'last_name',
-    'etat',
-    'description',
-    'idpause',
-    'pause',
-   
-
-
-    
-        ]                                                       
+            'id',
+            'pointeuse',
+            'pointeusename',
+            'date_pointage',
+            'employes',        # => maintenant writable
+            'employe',         # => read_only
+            'matricule',
+            'last_name',
+            'etat',
+            'description',
+            'idpause',
+            'pause',
+        ]
+                                                  
 
 class EquipeSerializer(serializers.ModelSerializer) : 
      class Meta : 
@@ -318,6 +386,7 @@ class MotifabsSerializer(serializers.ModelSerializer) :
 class AbsenceSerializer(serializers.ModelSerializer):
         employee = serializers.CharField(source='employes.user_name' ,read_only=True)
         employeelastname = serializers.CharField(source='employes.last_name' ,read_only=True)
+        matricule=serializers.CharField(source='employes.matricule' ,read_only=True)
         motif = serializers.CharField(source='motif_abs.motif',read_only=True)
         class Meta:
                 model=absence
@@ -333,7 +402,8 @@ class AbsenceSerializer(serializers.ModelSerializer):
                         'justifie',
                         'heure_debut',
                         'heure_fin',
-                        'employeelastname'
+                        'employeelastname',
+                        'matricule',
                 ]        
 
 class ContratSerializer(serializers.ModelSerializer):
@@ -623,6 +693,7 @@ class MyTokenVerifySerializer(TokenVerifySerializer):
            data['soldemaladie']=c.get('soldemaladie')
            data['email']=c.get('email')    
            data['last_name']=c.get('last_name')  
+           data['nbenfants']=c.get('nbenfants') 
            data['view_teletravail']=rolesvalues.get('view_teletravail')
            data['view_mission']=rolesvalues.get('view_mission')
            data['view_autorisation']=rolesvalues.get('view_autorisation')     
@@ -649,7 +720,7 @@ class MyTokenVerifySerializer(TokenVerifySerializer):
            data['view_demandeaut']=rolesvalues.get('view_demandeaut')
            data['demandeautedit']=rolesvalues.get('demandeautedit')
            data['demandeautdelete']=rolesvalues.get('demandeautdelete')                
-        else: #admin ou n'a pas un role=>admin
+        elif c.get('is_superuser')==True: #admin ou n'a pas un role=>admin
                 data['admin']=True
                 
                 data['id'] =idusercurrent          
@@ -697,15 +768,15 @@ class MyTokenVerifySerializer(TokenVerifySerializer):
                 data['view_autorisation']=True
                 data['teletravail_aujourdhui']=True
                 data['view_Sites']=True
-                data['view_employe_rh']=False
-                data['view_dep_rh']=False
-                data['view_contrat_rh']=False
-                data['view_horaire_rh']=False
-                data['view_planinng_rh']=False
-                data['view_abscence_rh']=False
-                data['view_historique_rh']=False
+                data['view_employe_rh']=True
+                data['view_dep_rh']=True
+                data['view_contrat_rh']=True
+                data['view_horaire_rh']=True
+                data['view_planinng_rh']=True
+                data['view_abscence_rh']=True
+                data['view_historique_rh']=True
                 data['viewlistcontrats_admin']=True
-                data['viewlistcontrats_rh']=False
+                data['viewlistcontrats_rh']=True
                 data['viewlistTeletravail_drh']=True
                 data['viewdirecteur']=True
                 data['iddep']=[]
@@ -719,12 +790,82 @@ class MyTokenVerifySerializer(TokenVerifySerializer):
                 data['view_demandeaut']=True
                 data['demandeautedit']=True
                 data['demandeautdelete']=True
+        else:  # valeurs par défaut pour les non-admins
+                data['admin'] = False
+                data['id'] = idusercurrent
+                data['role'] = "user"
+                data['view_absence'] = False
+                data['view_conge'] = False
+                data['view_employé'] = False
+                data['modifier_employé'] = False
+                data['delete_employé'] = False
+                data['view_departements'] = False
+                data['view_departements_edit'] = False
+                data['view_departements_del'] = False
+                data['view_contrats'] = False
+                data['view_horaire'] = False
+                data['view_planing'] = False
+                data['contratsedit'] = False
+                data['contartdelete'] = False
+                data['pointeuseedit'] = False
+                data['pointeusedelete'] = False
+                data['horaireedit'] = False
+                data['horairedelete'] = False
+                data['planningedit'] = False
+                data['planningdelete'] = False
+                data['view_pointeuse'] = False
+                data['absenceedit'] = False
+                data['absencedelete'] = False
+                data['Sitesedit'] = False
+                data['Sitesdelete'] = False
+                data['view_pointage'] = False
+                data['pointageedit'] = False
+                data['pointagedelete'] = False
+                data['view_espacepdg'] = False
+                data['view_rapports'] = False
+                data['view_historique'] = False
+                data['view_mouchard'] = False
+                data['user_name'] = c.get('user_name')
+                data['matricule'] = c.get('matricule')
+                data['rolename'] = ""
+                data['solde'] = c.get('solde')
+                data['soldemaladie'] = c.get('soldemaladie')
+                data['email'] = c.get('email')
+                data['last_name'] = c.get('last_name')
+                data['view_teletravail'] = False
+                data['view_mission'] = False
+                data['view_autorisation'] = False
+                data['teletravail_aujourdhui'] = False
+                data['view_Sites'] = False
+                data['view_employe_rh'] = False
+                data['view_dep_rh'] = False
+                data['view_contrat_rh'] = False
+                data['view_horaire_rh'] = False
+                data['view_planinng_rh'] = False
+                data['view_abscence_rh'] = False
+                data['view_historique_rh'] = False
+                data['viewlistcontrats_admin'] = False
+                data['viewlistcontrats_rh'] = False
+                data['viewlistTeletravail_drh'] = False
+                data['viewdirecteur'] = False
+                data['iddep'] = []
+                data['affectationopause'] = False
+                data['accuiel'] = False
+                data['directionoperations'] = False
+                data['wfm'] = False
+                data['view_demanderh'] = False
+                data['demanderhedit'] = False
+                data['demanderhdelete'] = False
+                data['view_demandeaut'] = False
+                data['demandeautedit'] = False
+                data['demandeautdelete'] = False
         return data
 class DetailsContratsEmployesSerializer(serializers.ModelSerializer):
         user_name=serializers.CharField( source='employe.user_name' ,  read_only=True)
         nomcontrat=serializers.CharField(source="typecontrat.contratname",read_only=True)        
         last_name=serializers.CharField( source='employe.last_name' ,  read_only=True) 
-        daterecrutement=serializers.CharField( source='employe.datedemarrage' ,  read_only=True)     
+        daterecrutement=serializers.CharField( source='employe.datedemarrage' ,  read_only=True)   
+        typecontrat =serializers.CharField( source='employe.type_contrat' ,  read_only=True) 
         class Meta:
                 model=DetailsContratsEmployes
                 fields=[

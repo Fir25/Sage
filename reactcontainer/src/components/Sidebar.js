@@ -31,6 +31,7 @@ import CrudHorraire from './Horaire/CrudHorraire';
 import CrudPlansemaine from './Horaire/CrudPlansemaine';
 import ListdemandeRh from './demanderh/cruddemanderh';
 import CrudMotif from './Absence/CrudMotif';
+import AjoutPointage from './AjoutPointage/AjoutPointage';
 
 import {
   Route,
@@ -49,6 +50,7 @@ import RapportPointage from './Rapports/RapportPointage';
 import RappportJournalier from './Rapports/RapportJournalier';
 import RapportSemaine from './Rapports/RapportSemaine';
 import Rapportabsences from './Rapports/Rapportabsences';
+import RapportAnomalie from './Rapports/RapportAnomalie';
 import RapportSynthese from './Rapports/Rapportsynthese';
 import Tableau from './Accueil/Tableau';
 import EmployesPartis from './Utilisateurs/EmployesPartis';
@@ -69,6 +71,9 @@ import Listautorisations from './Autorisations/Listautorisations';
 import ListeMissions from './Missions/ListMissions';
 import CoPresentIcon from '@mui/icons-material/CoPresent';
 import CrudSite from './Site/CrudSite';
+import CrudSuperviseur from './Superviseur/CrudSuperviseur';
+import CrudLigne from './Ligne/CrudLigne';
+import CrudSkill from './Skill/CrudSkill';
 import Crudequipe from './equipe/Crudequipe'
 import RoomPreferencesIcon from '@mui/icons-material/RoomPreferences';
 import TableRowsIcon from '@mui/icons-material/TableRows';
@@ -172,7 +177,7 @@ function Sidebar() {
           </button>
 
           <div >
-            <img src="./activecontact.png" style={{ justifyContent: 'center', width: "110px", height: "80%" }} className="img-responsive logo"  alt="..." />
+            <img src="./logo.png" style={{ justifyContent: 'center', width: "110px", height: "80%" }} className="img-responsive logo"  alt="..." />
           </div>
 
           <ul className="nav align-items-center d-md-none">
@@ -272,7 +277,7 @@ function Sidebar() {
                   </a>
                   <div className="dropdown-menu" aria-labelledby="dropdownMenupdg">
 
-                  <Link className="dropdown-item" to="/home/Rapportbusiness" >Tableau de supervision </Link>
+                 
                 
                    
                     {test['view_employe_rh'] && (
@@ -286,7 +291,7 @@ function Sidebar() {
                                        <Link  className="dropdown-item" to="/home/listdemandepointage">Liste de demande pointage</Link>
                                        )}
                    
-                    <Link className='dropdown-item' to="/home/indicateurautomatiquedirecteur">Indicateurs Dynamique</Link>
+                    {/* <Link className='dropdown-item' to="/home/indicateurautomatiquedirecteur">Indicateurs Dynamique</Link> */}
 
                     {/* const [view_employe_rh,setViewdconge]=useState(false)
     const [view_dep_rh,setViewdpoin]=useState(false)
@@ -335,15 +340,15 @@ function Sidebar() {
                           <Link className="dropdown-item" to="/home/rapportpointage">Rapport Pointages</Link>
 
                           <Link className="dropdown-item" to="/home/rapportjournalier">Rapport Journalier</Link>
-                          <Link className="dropdown-item" to="/home/rapportvb"> Import VB</Link>
-                          <Link className="dropdown-item" to="/home/rapportconges">Rapport Congés</Link>
+                          {/* <Link className="dropdown-item" to="/home/rapportvb"> Import VB</Link> */}
+                          {/* <Link className="dropdown-item" to="/home/rapportconges">Rapport Congés</Link> */}
                           <Link className="dropdown-item" to="/home/rapportsemaine">Rapport Semaine</Link>
                           <Link className="dropdown-item" to="/home/rapportabsence">Rapport d'absence</Link>
-
+                          <Link className="dropdown-item" to="/home/rapportanomalie">Rapport d'Anomalie</Link>
                           <Link className="dropdown-item" to="/home/rapportsynthese">Rapport Synthése</Link>
-                          <Link className="dropdown-item" to="/home/rapportmois">rapport mensuel</Link>
+                          {/* <Link className="dropdown-item" to="/home/rapportmois">rapport mensuel</Link> */}
 
-                          <Link className="dropdown-item" to="/home/rapportparans">Rapport Annuel</Link>
+                          {/* <Link className="dropdown-item" to="/home/rapportparans">Rapport Annuel</Link> */}
                       
                         </div>
                       </div>
@@ -383,17 +388,17 @@ function Sidebar() {
 
                     </div>
                   </li>):""}
-                  {test['view_mission'] == true?(    <li className="nav-item">
+                  {/* {test['view_mission'] == true?(    <li className="nav-item">
                     <div className="nav-link" >
                       <a target="_blank">
                         <FingerprintIcon
                           className={classes.iconSidebar}
                         />
                       </a>
-                      <Link className="nav-link-text" to="/home/demandepointage" id="textsidebargras">Demande Pointage</Link>
+                      { <Link className="nav-link-text" to="/home/demandepointage" id="textsidebargras">Demande Pointage</Link> }
 
                     </div>
-                  </li>):""}
+                  </li>):""} */}
                   
               {test['view_departements'] == true || test['view_dep_rh']==true ? (<><li className="nav-item"  id="textsidebargras">
                 <div className="nav-link">
@@ -407,7 +412,7 @@ function Sidebar() {
               </li>
             </>) : ""}
 
-              {test['affectationopause'] == true?     
+              {/* {test['affectationopause'] == true?     
                <li className="nav-item">
                 <div className="nav-link">
                   <a >
@@ -418,7 +423,7 @@ function Sidebar() {
                 </div>
 
               </li>
-              :""}
+              :""} */}
 
    
               
@@ -537,6 +542,18 @@ Télétravail
     
         <Link className="dropdown-item" to="/home/equipe" >
           Equipes
+        </Link>
+        <Link className="dropdown-item" to="/home/Superviseur" >
+          Superviseur
+        </Link>
+        <Link className="dropdown-item" to="/home/Ligne" >
+        Ligne
+        </Link>
+         <Link className="dropdown-item" to="/home/Skill" >
+        Skill
+        </Link>
+        <Link className="dropdown-item" to="/home/AjoutPointage" >
+        AjoutPointage
         </Link>
     
   </React.Fragment>
@@ -732,6 +749,7 @@ Télétravail
           <Route path="Pointeuses" element={<CrudPointeuse />} />
           <Route path="Horaire" element={<CrudHorraire />} />
           <Route path="Motif" element={<CrudMotif />} />
+          <Route path="AjoutPointage" element={<AjoutPointage />} />
           <Route path="Departements" element={<CrudDepartement />} />
           <Route path="organigramme" element={<Organigramme />} />
 
@@ -765,6 +783,7 @@ Télétravail
 
           <Route path="rapportsemaine" element={<RapportSemaine />}></Route>
           <Route path="rapportabsence" element={<Rapportabsences />}></Route>
+          <Route path="rapportanomalie" element={<RapportAnomalie />}></Route>
           <Route path="rapportsynthese" element={<RapportSynthese />}></Route>
           <Route path="" element={<Tableau />}></Route>
           <Route path="employespartis" element={<EmployesPartis />}></Route>
@@ -776,7 +795,9 @@ Télétravail
           <Route path="Listteletravails" element={<Teletravails/>}></Route>
           <Route path="site" element={<CrudSite/>}></Route>
           <Route path="Equipe" element={<Crudequipe/>}></Route>
-          
+          <Route path="Superviseur" element={<CrudSuperviseur/>}></Route>
+          <Route path="Ligne" element={<CrudLigne/>}></Route>
+          <Route path="Skill" element={<CrudSkill/>}></Route>
           <Route path="listcontrats" element={<Contratss/>}></Route>
 
 

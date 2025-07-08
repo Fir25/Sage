@@ -81,7 +81,7 @@ function CrudAbsence() {
   }
   ,[openn,post])
   const { data: absences,isloading:ll,error:rr } = useFetch(url+"Absence/")
-  const { data: users = []} = useFetch(url+"user/")
+  const { data: users = []} = useFetch(url+"userselect/")
   const { data: motifs = []} = useFetch(url+"motif/")
   const [employes, setemployes] = useState('');
   const [raison, setRaison] = useState('');
@@ -219,7 +219,6 @@ setAlert(false)
 
 
   }
-
   return (
     <div>
 
@@ -235,17 +234,18 @@ setAlert(false)
              <AjouterAbsence />
              
               </div>
-              <ScrollContainer className="scroll-container">
+              {/* <ScrollContainer className="scroll-container"> */}
 
 {post  ?
 
 
-Object.keys(userinfo).length !=0?
+
               <div className="table-responsive">
                 <table className="table table-bordered display" id="absetable">
                   <thead className="thead-light">
                     <tr>
                       <th scope="col">Nom d'Employé</th>
+                      <th scope="col">Matricule </th> 
                       <th scope="col">Motif d'Absence</th>
 
                       <th scope="col">Date de début</th>
@@ -256,7 +256,7 @@ Object.keys(userinfo).length !=0?
                       <th scope="col">Raison</th>
                       <th scope="col">Justifié</th>
                     
-                {userinfo.map(v=>v.view_abscence_rh==true ?"":    <th scope="col">Action</th>)}  
+                   <th scope="col">Action</th> 
                      
                     </tr>
                   </thead>
@@ -264,7 +264,8 @@ Object.keys(userinfo).length !=0?
 
                     {absences.map(abse =>
                       <tr key={abse.id}>
-                        <td>{abse.employee}</td>
+                        <td>{abse.employee}{" "}{abse.employeelastname}</td>
+                        <td>{abse.matricule}</td>
                         <td> {abse.motif}</td>
                         <td>{abse.datedebut}</td>
                         <td>{abse.datefin}</td>
@@ -274,7 +275,7 @@ Object.keys(userinfo).length !=0?
                         <td>{abse.justifie ? "oui" : "Non"}</td>
 
                  
-                        {userinfo.map(v=>v.view_abscence_rh==true ?"":  <td> <div className="row"><div className="col-md-6">
+                        <td> <div className="row"><div className="col-md-6">
 
 { absenceedit && <a onClick={() => SelectAbsence(abse.id)} data-toggle="modal" data-target="#absenceupdate" ><EditIcon
   className={classes.icon}
@@ -285,7 +286,7 @@ Object.keys(userinfo).length !=0?
 
 
 </div>
-</div></td>)} 
+</div></td> 
                          
                            
                          
@@ -318,10 +319,11 @@ Object.keys(userinfo).length !=0?
                   </tbody>
                 </table>
               </div>
-:""
+
               :( <>{absences.length==0 && ll==true? <Backdrop  open={openn}>
   <CircularProgress  style={{top : '50%'}} color="black" />
-  </Backdrop>:setPost(true)}</>)}</ScrollContainer>
+  </Backdrop>:setPost(true)}</>)}
+  {/* </ScrollContainer> */}
             </div>
             <div className="container">
 
@@ -352,8 +354,8 @@ Object.keys(userinfo).length !=0?
                                         <Autocomplete
    
    options={users}
-   getOptionLabel={(option) => option.user_name +"  " +option.last_name || ""}
-
+   getOptionLabel={(option) => option.label  || ""}
+  
    renderInput={(params) => (
      <TextField {...params} label={nomemploye+" "+prenomemploye} variant="outlined" />
    )}

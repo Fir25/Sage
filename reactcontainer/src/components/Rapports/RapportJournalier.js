@@ -42,11 +42,29 @@ export const ComponentJournalierToPrint = React.forwardRef((props, ref) => {
   var iddep=iddd==""? undefined:iddd
   const token = localStorage.getItem('access_token') ? 'Bearer ' +localStorage.getItem('access_token') :null
   const [uss,setuss]=useState([])
+   const [ligne, setLigne] = useState([]);
+   const [superviseur, setSuperviseur] = useState([]);
+  const [listeligne, setListeLigne] = useState([]);
+  const { data: ligness = [], isloading: loadingLigne, error: errorLigne } = useFetch(url + "listligne");
+  const { data: superviseurs = [], isloading: loadingSuperviseur, error: errorSuperviseur } = useFetch(url + "listsuperviseur");
+//  useEffect(() => {
+  
+//     setListeLigne(lignes.map(l => ({ label: l.nom, value: l.id }))); // Adapter selon ton API
+ 
+//  }, [lignes]);
   const users=[]
-
+  const lg=[]
+  const ac = []
+  const si = []
+  const sup = []
   const[uu,setU]=useState([])
 
+  const [selectedDepartments, setSelectedDepartments] = useState([]);
 
+  // Lorsque les départements sont sélectionnés, nous les mettons à jour dans l'état
+  const handleDepartmentChange = (selectedValues) => {
+    setSelectedDepartments(selectedValues);  // Cela met à jour la sélection multiple des départements
+  };
   
   const [activite, setActivite] = useState([])
   const activities = [
@@ -57,31 +75,60 @@ export const ComponentJournalierToPrint = React.forwardRef((props, ref) => {
   const [site, setSite] = useState([])
   const { data: sites = [], isloading, error } = useFetch(url+"ListSite_ForSelect/")
  const optionsRapport=[
- 
-    {"label":"Matricule","value":"Matricule"},
-    {"label":"Autorisation","value":"Autorisation"},
-    {"label":"Nom Employé","value":"Nom Employé"},
-    {"label":"Date","value":"Date"},
-    {"label":"Déficit","value":"Déficit"},
-    {"label":"h.Travail","value":"h.Travail"},
-    {"label":"h.Théorique","value":"h.Théorique"},
-    {"label":"Pointages","value":"Pointages"},
-    {"label":"Retard d'entrée","value":"Retard d'entrée"},
-    {"label":"Retard de midi","value":"Retard de midi"},
-    {"label":"Départ anticipé","value":"Départ anticipé"},
+  { "label": " matricule", "value": "matricule" },
+  { "label": "user_name", "value": "user_name" },
+  { "label": "last_name", "value": "last_name" },
+  { "label": "date_pointage", "value": "date_pointage" },
+  { "label": "nomhoraire", "value": "nomhoraire" },
+  { "label": "debuthoraire", "value": "debuthoraire" },
+  { "label": "finhoraire", "value": "finhoraire" },
+  { "label": "Entree", "value": "Entree" },
+  { "label": "Sortie", "value": "Sortie" },
+  { "label": "refpointeuse", "value": "refpointeuse" },
+  { "label": "efpointeuse", "value": "efpointeuse" },
+  { "label": "jour_travaille", "value": "jour_travaille" },
+  { "label": "jour_nrmlmn_travaille", "value": "jour_nrmlmn_travaille" },
+  { "label": "retard", "value": "retard" },
+  { "label": "depart_anticipe", "value": "depart_anticipe" },
+  { "label": "Absent", "value": "Absent" },
+  { "label": "heuresup", "value": "heuresup" },
+  { "label": "heuresupvalide", "value": "heuresupvalide" },
+  { "label": "presenceplann", "value": "presenceplann" },
+  { "label": "motif", "value": "motif" },
+  { "label": "departement_name", "value": "departement_name" },
+  { "label": "presencenormal", "value": "presencenormal" },
+  { "label": "ligne_de_production", "value": "ligne_de_production" },
+  { "label": "superviseur", "value": "superviseur" },
 
-    {"label":"Mission","value":"Mission"},
-    {"label":"Congé","value":"Congé"},
-    {"label":"Motif","value":"Motif"},
+    // {"label":"Matricule","value":"Matricule"},
+    // {"label":"Autorisation","value":"Autorisation"},
+    // {"label":"Nom Employé","value":"Nom Employé"},
+    // {"label":"Date","value":"Date"},
+    // {"label":"Déficit","value":"Déficit"},
+    // {"label":"h.Travail","value":"h.Travail"},
+    // {"label":"h.Théorique","value":"h.Théorique"},
+    // {"label":"Pointages","value":"Pointages"},
+    // {"label":"Retard d'entrée","value":"Retard d'entrée"},
+    // {"label":"Retard de midi","value":"Retard de midi"},
+    // {"label":"Départ anticipé","value":"Départ anticipé"},
+
+    // {"label":"Mission","value":"Mission"},
+    // {"label":"Congé","value":"Congé"},
+    // {"label":"Motif","value":"Motif"},
     
-    {"label":"Travail brute","value":"Travail brute"},
-  ]
+    // {"label":"Travail brute","value":"Travail brute"},
+    // {"label":"Département","value":"Département"},
+    // {"label": "Horaire", "value": "Horaire"},
+    // {"label": "Réf pointeuse", "value": "Réf pointeuse"}
+  ];
 
   useEffect(() => {
     ac.push(activite.map(x => x.value))
     si.push(site.map(y => y.value))
-
-    fetch(url+"userofdepartements/?id=" + uu+ "&idactivite=" + ac , {method: 'GET', 
+    console.log(ligne)
+    lg.push(ligne.map(l => l.value))
+    sup.push(superviseur.map(s=>s.value))
+    fetch(url+"userofdepartements/?id=" + uu+ "&idactivite=" + ac+"&idligne="+lg +"&idsuperviseur="+sup, {method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
@@ -104,7 +151,7 @@ export const ComponentJournalierToPrint = React.forwardRef((props, ref) => {
      
     })
 
-  }, [activite, site,uu])
+  }, [activite, site,ligne,superviseur ,uu])
 
 
   
@@ -112,13 +159,11 @@ export const ComponentJournalierToPrint = React.forwardRef((props, ref) => {
  
 
   
-  const ac = []
-  const si = []
 
   const [selectedd, setSelectedd] = useState([]);
   const arr=[]
   $(document).ready(function () {
-    
+     
     $('#rapjour').DataTable({
       
       language:frdatatable,
@@ -172,12 +217,15 @@ export const ComponentJournalierToPrint = React.forwardRef((props, ref) => {
       
       arr.push(selectedd.map(x=>x.value))
   
-      fetch(url+"rapportjour/" + date1 + "/" + date2 + "/?id=" + arr , {method: 'GET', 
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: token,
-      }}).then((result) => {
+      fetch(url + "rapportjour/" + date1 + "/" + date2 + "/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({ ids: arr }), // Envoie les IDs dans le body
+      }).then((result) => {
         result.json().then((resp) => {
   
           setPost(true)
@@ -250,34 +298,18 @@ export const ComponentJournalierToPrint = React.forwardRef((props, ref) => {
    
   }else{
     setloginemploye(true)
-    setTreeData([])
+    setTreeData([])   
   }
   
   
   },[treeData,data,dataadmin])
  const [treeData, setTreeData] = React.useState([]);
-
-
-
-
-
-
-
-
-
-
-
-
-
  const handleChange = (selected, allchecked) =>{
   let results = allchecked.map(({value})=>value);
 
   setU(results)
 }
-
-
-
-
+  
  const dropdown = useMemo(()=>{
   return(
 
@@ -286,7 +318,9 @@ export const ComponentJournalierToPrint = React.forwardRef((props, ref) => {
               onChange={(selected, allchecked) =>{handleChange(selected, allchecked)}}
               texts={{ placeholder: "Département" }}
               className="mdl-demo" 
+              
           />
+          
    )}, [treeData]);
 
   return (
@@ -299,16 +333,8 @@ export const ComponentJournalierToPrint = React.forwardRef((props, ref) => {
     <div className="card">
 
     <div className="card-header" id="colorcardheader">
-<h2 id="textcolor" >Importer Rapport Journalier</h2></div> 
-      
-                        
+<h2 id="textcolor" >Importer Rapport Journalier</h2></div>                        
           <form>
-
-
-       
-
-
-
           {loginemploye ? 
           <>          <div className="row pl-4 pr-4 pt-4">
           <div className="col-md-4 ">
@@ -383,6 +409,8 @@ export const ComponentJournalierToPrint = React.forwardRef((props, ref) => {
             <div className='col-md-3'>
 
      <label>Département</label>
+    
+      
 {dropdown}
 
 
@@ -401,6 +429,16 @@ export const ComponentJournalierToPrint = React.forwardRef((props, ref) => {
 
 
               </div>
+              { <div className="col-md-3">
+                <label>Ligne </label>
+                <MultiSelect  options={ligness}  value={ligne}  onChange={setLigne}  />
+
+              </div> }
+              { <div className="col-md-3">
+                <label>Superviseur </label>
+                <MultiSelect  options={superviseurs}  value={superviseur}  onChange={setSuperviseur}  />
+
+              </div> }
 
 
 
@@ -464,68 +502,106 @@ dat.length==0?"":
     <hr/>
 <div className="table-responsive" >
               <ScrollContainer className="scroll-container">
-           
+              <div style={{ overflowX: "auto" }}>
               <table  id="rapjour" ref={ref}  >
                   <thead className="thead-light">
-                    <tr>
-      
-                      { optionnss.find(e=>e.value.toString()=="Nom Employé" ) ?   <th title="employé" > Emp</th> : <th></th>}
-                    { optionnss.find(e=>e.value.toString()=="Matricule" ) ?<th> Mat</th> :<th></th>   }    
-                  { optionnss.find(e=>e.value.toString()=="Date" ) ?    <th title="Date">  date</th>:<th></th> }
-                     { optionnss.find(e=>e.value.toString()=="Déficit" ) ?      <th title='déficit'>Déficit</th>:<th></th> }
-                     { optionnss.find(e=>e.value.toString()=="h.Travail" ) ?  <th title='heures pratique'>   Heff</th>:<th></th> }
-                      { optionnss.find(e=>e.value.toString()=="Travail brute" ) ?<th title='heures pratique brute'> travail brute</th>:<th></th> }
-                     
-                    { optionnss.find(e=>e.value.toString()=="h.Théorique" ) ?   <th title='heures théorique '>     théorique </th> :<th></th> }
-                     { optionnss.find(e=>e.value.toString()=="Pointages" ) ? <th > Pointages </th>   :<th></th> }
-                 
-                     { optionnss.find(e=>e.value.toString()=="Retard d'entrée" ) ?    <th title='Retard d entrée'>  Ret.Entrée</th>:<th></th> }
-                   { optionnss.find(e=>e.value.toString()=="Retard de midi" )    ?  <th title='Retard midi'> Ret.Midi</th>:<th></th> }
-                     { optionnss.find(e=>e.value.toString()=="Départ anticipé" )    ?<th title='Heures avant de sortie'>   SAH</th>:<th></th> }
-                  { optionnss.find(e=>e.value.toString()=="Autorisation" )    ?   <th title='autorisation'>  Aut</th>:<th></th> }
-                    
-                 
-           
-                          
-                   { optionnss.find(e=>e.value.toString()=="Mission" )    ?   <th title='Mission'>  Miss</th>:<th></th> }
-                     { optionnss.find(e=>e.value.toString()=="Congé" )    ?<th title='Congé'>   congé</th>:<th></th> }
-                     { optionnss.find(e=>e.value.toString()=="Motif" )    ?    <th title='Motif'>Motif</th>:<th></th> }
-                   
-                    </tr>
+                  <tr>
+  {/* Matricule */}
+  {optionnss.find(e => e.value.toString() === "matricule") ? <th>Mat</th> : <th></th>}
+  {/* Prénom */}
+  {optionnss.find(e => e.value.toString() === "user_name") ? <th title="Prénom">Prénom</th> : <th></th>}
+  {/* Nom */}
+  {optionnss.find(e => e.value.toString() === "last_name") ? <th title="Nom">Nom</th> : <th></th>}
+  {/* Date de Pointage */}
+  {optionnss.find(e => e.value.toString() === "date_pointage") ? <th title="Date de Pointage">Date</th> : <th></th>}
+  {/* Horaire */}
+  {optionnss.find(e => e.value.toString() === "nomhoraire") ? <th title="Horaire">Horaire</th> : <th></th>}
+  {/* Début Horaire */}
+  {optionnss.find(e => e.value.toString() === "debuthoraire") ? <th>Début Horaire</th> : <th></th>}
+  {/* Fin Horaire */}
+  {optionnss.find(e => e.value.toString() === "finhoraire") ? <th title="Fin Horaire">Fin Horaire</th> : <th></th>}
+  {/* Heure d'Entrée */}
+  {optionnss.find(e => e.value.toString() === "Entree") ? <th title="Entrée">Entrée</th> : <th></th>}
+  {/* Heure de Sortie */}
+  {optionnss.find(e => e.value.toString() === "Sortie") ? <th title="Sortie">Sortie</th> : <th></th>}
+  {/* Référence Pointeuse */}
+  {optionnss.find(e => e.value.toString() === "refpointeuse","efpointeuse" ) ? <th title="Réf Pointeuse">Réf Pointeuse</th> : <th></th>}
+  {/* Jour Travaillé */}
+  {/* {optionnss.find(e => e.value.toString() === "jour_travaille") ? <th title="Jour Travaillé">Jour Travaillé</th> : <th></th>}
+  {optionnss.find(e => e.value.toString() === "jour_nrmlmn_travaille") ? <th title="Jour Normalement Travaillé">Jour Normalement Travaillé</th> : <th></th>} */}
+  {/* Retard */}
+  {optionnss.find(e => e.value.toString() === "retard") ? <th title="Retard">Retard</th> : <th></th>}
+  {/* Départ Anticipé */}
+  {optionnss.find(e => e.value.toString() === "Départ anticipé") ? <th title="Départ Anticipé">Départ Anticipé</th> : <th></th>}
+  {/* Absentéisme */}
+  {optionnss.find(e => e.value.toString() === "Absent") ? <th title="Absent">Absent</th> : <th></th>}
+  {/* Heures Supplémentaires */}
+  {optionnss.find(e => e.value.toString() === "heuresup") ? <th title="Heures Supplémentaires">Heures Supplémentaires</th> : <th></th>}
+  {}
+  {optionnss.find(e => e.value.toString() === "heuresupvalide") ? <th title="Heures Supplémentaires Validés">Heures Supplémentaires Validés</th> : <th></th>}
+  {/* Présence Planifiée */}
+  {optionnss.find(e => e.value.toString() === "presenceplann") ? <th title="Présence Planifiée">Présence Planifiée</th> : <th></th>}
+  {/* Motif */}
+  {optionnss.find(e => e.value.toString() === "motif") ? <th title="Motif">Motif</th> : <th></th>}
+  {/* Département */}
+  {optionnss.find(e => e.value.toString() === "departement_name") ? <th title="Département">Département</th> : <th></th>}
+  {optionnss.find(e => e.value.toString() === "ligne_de_production") ? <th title="ligne_de_production">Ligne</th> : <th></th>}
+  {optionnss.find(e => e.value.toString() === "superviseur") ? <th title="superviseur">Superviseur</th> : <th></th>}
+  {/* Présence Normale */}
+  {optionnss.find(e => e.value.toString() === "presencenormal") ? <th title="Présence Normale">Présence Normale</th> : <th></th>}
+</tr>
                   </thead>       
                   <tbody>
                     
                   {dat.map(jour=>
                     
   <>  
+ 
   <tr key={jour.id}>
-                        { optionnss.find(e=>e.value.toString()=="Nom Employé" ) ?         <td>{jour.user_name +" "+jour.last_name}</td>:<td></td>}
-                        { optionnss.find(e=>e.value.toString()=="Matricule" ) ?       <td>{jour.matricule}</td>:<td></td>}
-                        { optionnss.find(e=>e.value.toString()=="Date" ) ?      <td>{jour.date_pointage}</td>:<td></td>}
-                        { optionnss.find(e=>e.value.toString()=="Déficit" ) ?   (jour.deficit=="00:00"?<td> 0</td>:   <td>{ jour.deficit }</td>):<td></td>}
-                   
-                        { optionnss.find(e=>e.value.toString()=="h.Travail" ) ?    <td title='heures pratique'>{ jour.heuretravail }</td>:<td></td>}
-                        { optionnss.find(e=>e.value.toString()=="Travail brute" ) ?  <td title='heures de travail brute'>{jour.heuretravailbrute}</td>:<td></td>}
-                           
-                        { optionnss.find(e=>e.value.toString()=="h.Théorique" ) ?    <td title='heures théorique '>{jour.presencenormal }</td>:<td></td>}
-                      
-               
-
-               { optionnss.find(e=>e.value.toString()=="Pointages" ) ?       <td >{jour.pointages}</td>:<td></td>}
-        
-               { optionnss.find(e=>e.value.toString()=="Retard d'entrée" ) ?     <td title='Retard d entrée'>{jour.lateEntree}</td>:<td></td>}
-                      
-               { optionnss.find(e=>e.value.toString()=="Retard de midi" )    ?     <td title='Retard midi'>{jour.retardmidi}</td>:<td></td>}
-               { optionnss.find(e=>e.value.toString()=="Départ anticipé" )    ?     <td title='heures avant sortie'>{ jour.earlySortie }</td>:<td></td>}
-               { optionnss.find(e=>e.value.toString()=="Autorisation" )    ?    <td title='autorisation'>{jour.heureauthorisation }</td>:<td></td>}
-                   
-          
-
-               { optionnss.find(e=>e.value.toString()=="Mission" )    ? <td title='Mission'>{ jour.tempsMission }</td>:<td></td>}
-
-               { optionnss.find(e=>e.value.toString()=="Congé" )    ?     <td title='Congé'>{jour.tempsconge}</td>:<td></td>}
-               { optionnss.find(e=>e.value.toString()=="Motif" )    ? <td title='Motif'>{jour.motif}</td>:<td></td>}
-                      </tr>
+      {/* Matricule */}
+    {optionnss.find(e => e.value.toString() === "matricule") ? <td>{jour.matricule}</td> : <td></td>}
+    {/* Prénom */}
+    {optionnss.find(e => e.value.toString() === "user_name") ? <td>{jour.user_name}</td> : <td></td>}
+    {/* Nom */}
+    {optionnss.find(e => e.value.toString() === "last_name") ? <td>{jour.last_name}</td> : <td></td>}
+    {/* Date de Pointage */}
+    {optionnss.find(e => e.value.toString() === "date_pointage") ? <td>{jour.date_pointage}</td> : <td></td>}
+    {/* Horaire */}
+    {optionnss.find(e => e.value.toString() === "nomhoraire") ? <td>{jour.nomhoraire}</td> : <td></td>}
+    {/* Début Horaire */}
+    {optionnss.find(e => e.value.toString() === "debuthoraire") ? <td>{jour.debuthoraire}</td> : <td></td>}
+    {/* Fin Horaire */}
+    {optionnss.find(e => e.value.toString() === "finhoraire") ? <td>{jour.finhoraire}</td> : <td></td>}
+    {/* Heure d'Entrée */}
+    {optionnss.find(e => e.value.toString() === "Entree") ? <td>{jour.Entree}</td> : <td></td>}
+    {/* Heure de Sortie */}
+    {optionnss.find(e => e.value.toString() === "Sortie") ? <td>{jour.Sortie}</td> : <td></td>}
+    {/* Référence Pointeuse */}
+    {optionnss.find(e => e.value.toString() === "refpointeuse","efpointeuse") ? <td>{jour.refpointeuse || ""} 
+    {jour. efpointeuse ? " / " + jour. efpointeuse  : ""}</td> : <td></td>}
+    {/* Jour Travaillé */}
+    {/* {optionnss.find(e => e.value.toString() === "jour_travaille") ? <td>{jour.jour_travaille}</td> : <td></td>}
+    {optionnss.find(e => e.value.toString() === " jour_nrmlmn_travaille") ? <td>{jour. jour_nrmlmn_travaille}</td> : <td></td>} */}
+    {/* Retard */}
+    {optionnss.find(e => e.value.toString() === "retard") ? <td>{jour.retard}</td> : <td></td>}
+    {/* Départ Anticipé */}
+    {optionnss.find(e => e.value.toString() === "Départ anticipé") ? <td>{jour.depart_anticipe}</td> : <td></td>}
+    {/* Absentéisme */}
+    {optionnss.find(e => e.value.toString() === "Absent") ? <td>{jour.Absent}</td> : <td></td>}
+    {/* Heures Supplémentaires */}
+    {optionnss.find(e => e.value.toString() === "heuresup") ? <td>{jour.heuresup}</td> : <td></td>}
+    {optionnss.find(e => e.value.toString() === "heuresupvalide") ? <td>{jour.heuresupvalide}</td> : <td></td>}
+    {/* Présence Planifiée */}
+    {optionnss.find(e => e.value.toString() === "presenceplann") ? <td>{jour.presenceplann}</td> : <td></td>}
+    {/* Motif */}
+    {optionnss.find(e => e.value.toString() === "motif") ? <td>{jour.motif}</td> : <td></td>}
+    {/* Département */}
+    {optionnss.find(e => e.value.toString() === "departement_name") ? <td>{jour.departement_name}</td> : <td></td>}
+    {optionnss.find(e => e.value.toString() === "ligne_de_production") ? <td>{jour.ligne_de_production}</td> : <td></td>}
+    {optionnss.find(e => e.value.toString() === "superviseur") ? <td>{jour.superviseur}</td> : <td></td>}
+    {/* Présence Normale */}
+    {optionnss.find(e => e.value.toString() === "presencenormal") ? <td>{jour.presencenormal}</td> : <td></td>}
+  </tr>
 
  </>
   )
@@ -539,7 +615,7 @@ dat.length==0?"":
      
                  
                 </table>
-      
+      </div>
                 </ScrollContainer>
               </div>  
 

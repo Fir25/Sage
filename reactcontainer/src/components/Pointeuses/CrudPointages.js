@@ -15,7 +15,7 @@ import { useState } from 'react';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-
+import Autocomplete from '@mui/material/Autocomplete';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
@@ -59,7 +59,7 @@ function CrudPointages() {
   }
   ,[openn,post])
   const { data: pointeuses} = useFetch(url+"pointeuse/")
-  const { data: employees } = useFetch(url+"user/")
+  const { data: users } = useFetch(url+"userselect/")
   const { data: pointages = [],isloading:ll,error:ee} = useFetch(url+"PointagesEmploye/"+iduserinfo)
 
   const [date_pointage, setDatePointage] = useState('');
@@ -462,11 +462,17 @@ $(document).ready(function () {
                               margin='normal'
                               fullWidth
                             >
-                              {employees.map((option) => (
-                                <MenuItem key={option.id} value={option.id}>
-                                  {option.user_name +"  "+option.last_name}
-                                </MenuItem>
-                              ))}
+                                 <Autocomplete
+   
+   options={users}
+   getOptionLabel={(option) => option.label  || ""}
+
+   renderInput={(params) => (
+    <TextField {...params} label="Employé" variant="outlined" />
+   )}
+   onChange={(event, value) =>{if (value && value.id){setemploye(value.id)}}} 
+    
+ /> 
 
                             </TextField>
                           </div>

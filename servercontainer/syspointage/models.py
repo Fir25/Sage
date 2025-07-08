@@ -40,6 +40,7 @@ class pointeuse (models.Model):
     adresse_ip = models.CharField(max_length=200 ,  unique=True)
     SIV = models.CharField(max_length=200 , null=True , blank=True )
     port =  models.CharField(max_length=200 , null=True , blank=True )
+    etat= models.BooleanField(default=False)
     
 class role (models.Model):
       rolename  = models.CharField(max_length=200 )   
@@ -162,7 +163,6 @@ class plansemaine  (models.Model):
 class planning (models.Model): 
     title  = models.TextField(max_length=250 , null=True , blank=True  ) 
     start = models.DateField(blank=True,null=True)
-    employe = models.ForeignKey( 'syspointage.NewUser', blank=True, null=True,   on_delete=SET_DEFAULT,  default=None , related_name='employe' ,  verbose_name='nom employe ')
     end = models.DateField(blank=True,null=True)
     plantravail = models.ForeignKey( plansemaine, blank=True, null=True,   on_delete=SET_DEFAULT,  default=None , related_name='plansemaine' ,  verbose_name='plansemaine')
     created_at = models.DateTimeField(auto_now_add=True)  
@@ -182,21 +182,22 @@ class Equipe (models.Model):
      nomequipe=models.CharField(max_length=200 , blank=True, null=True)       
 class NewUser(AbstractBaseUser, PermissionsMixin):  
      sex  = (
-        ('homme' , 'homme'),
-        ('femme','femme')
+         ('Homme', 'Homme'),
+        ('Femme', 'Femme'),
        
     )
      is_staff = models.BooleanField(default=False)
      is_active = models.BooleanField(default=True)
      matricule = models.CharField(max_length=200 , unique=True , null=True)
+     matricule_p = models.CharField(max_length=200 , unique=True , null=True)
      user_name =  models.CharField(max_length=200 , blank=True, null=True)
-     email =  models.EmailField(_('email address'),blank=True, null=True )
+     email =  models.EmailField(_('email address'),blank=True, null=True ) 
      password =  models.CharField(max_length=200 , null=False)
      matriculecnss = models.CharField(max_length=200 , blank=True, null=True ,default=None)
      sex= models.CharField(choices= sex ,max_length=50,blank=True)
      role = models.ForeignKey( role, blank=True, null=True,   on_delete=SET_DEFAULT,  default=None , related_name='role' ,  verbose_name='role de l employe ')
-     arborescence= models.ManyToManyField('syspointage.arborescence',related_name='departement', blank=True , null=True )
-     #planningemp = models.ManyToManyField('syspointage.planning', blank=True , null=True)
+     arborescence= models.ManyToManyField('syspointage.arborescence',related_name='departement', blank=True  )
+     planningemp = models.ManyToManyField('syspointage.planning', blank=True )
      
      datedemarrage= models.DateField(blank=True, null=True)
      """
@@ -205,11 +206,11 @@ class NewUser(AbstractBaseUser, PermissionsMixin):
      rappel2= models.DateField(blank=True, null=True)
      démarrageContrat= models.DateField(blank=True, null=True)
      """
-     idcontrat =models.ManyToManyField('syspointage.contrat', blank=True , null=True , through="DetailsContratsEmployes")
+     idcontrat =models.ManyToManyField('syspointage.contrat', blank=True , through="DetailsContratsEmployes")
      #idcontrat = models.ForeignKey( contrat, blank=True , null=True,  on_delete=SET_DEFAULT,  default=None , related_name='contrat' ,  verbose_name='contrat de l employe'  )
      datedenaissance= models.DateField(blank=True, null=True)
      CIN = models.CharField(max_length=200 , blank=True, null=True)
-     nbEnfants = models.IntegerField(max_length=200 , blank=True, null=True)
+     nbenfants = models.IntegerField( blank=True, null=True)
      tel = models.CharField(max_length=200 , blank=True, null=True)
      commentaire = models.CharField(max_length=200 , blank=True, null=True)
      objects = CustomAccountManager()
@@ -231,10 +232,70 @@ class NewUser(AbstractBaseUser, PermissionsMixin):
      matriculepaie=models.CharField(max_length=200 , blank=True, null=True)
      globale=models.FloatField(blank=True, null=True)
      soldemaladie=models.FloatField(blank=True, null=True)
+     intitule_etablissement = models.CharField(max_length=255, blank=True, null=True)
+     civilite = models.CharField(max_length=255, blank=True, null=True)
+     ligne_de_production = models.CharField(max_length=255, blank=True, null=True)
+     superviseur = models.CharField(max_length=255, blank=True, null=True)
+     poste = models.CharField(max_length=255, blank=True, null=True)
+     type_de_travail = models.CharField(max_length=255, blank=True, null=True)
+     categorie_sage_fc = models.CharField(max_length=255, blank=True, null=True)
+     fonction_fiche_de_paie = models.CharField(max_length=255, blank=True, null=True)
+     date_titularisation = models.DateField(blank=True, null=True)
+     nbre_jours_restants_echeance = models.IntegerField(blank=True, null=True)
+     date_depart_societe = models.DateField(blank=True, null=True)
+     type_depart = models.CharField(max_length=255, blank=True, null=True)
+     type_contrat = models.CharField(max_length=255, blank=True, null=True)
+     statut = models.CharField(max_length=255, blank=True, null=True)
+     date_debut_contrat_cdd = models.DateField(blank=True, null=True)
+     date_fin_contrat_cdd = models.DateField(blank=True, null=True)
+     date_debut_contrat_caip = models.DateField(blank=True, null=True)
+     date_fin_contrat_caip = models.DateField(blank=True, null=True)
+     premier_contrat_sage_tunisia = models.CharField(max_length=255, blank=True, null=True)
+     mois_embauche = models.CharField(max_length=2, blank=True, null=True)  
+     annee_embauche = models.IntegerField(blank=True, null=True)
+     annee_titularisation = models.IntegerField(blank=True, null=True)
+     anciennete = models.IntegerField(blank=True, null=True)
+     tranche_anciennete = models.CharField(max_length=255, blank=True, null=True)
+     age = models.IntegerField(blank=True, null=True)
+     tranche_age = models.CharField(max_length=255, blank=True, null=True)
+     cnss = models.CharField(max_length=255, blank=True, null=True)
+     date_delivrance_cin = models.DateField(blank=True, null=True)
+     niveau_scolaire = models.CharField(max_length=255, blank=True, null=True)
+     categorie = models.CharField(max_length=255, blank=True, null=True)
+     echelon = models.CharField(max_length=255, blank=True, null=True)
+     prochaine_date_echelon = models.DateField(blank=True, null=True)
+     type_salaire = models.CharField(max_length=255, blank=True, null=True)
+     cout_h = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+     rib_banquaire = models.CharField(max_length=255, blank=True, null=True)
+     banque = models.CharField(max_length=255, blank=True, null=True)
+     rib_virement = models.CharField(max_length=255, blank=True, null=True)
+     verif_nbr_rib = models.BooleanField(default=False)
+     adresse = models.CharField(max_length=255, blank=True, null=True)
+     commune = models.CharField(max_length=255, blank=True, null=True)
+     code_postale = models.CharField(max_length=10, blank=True, null=True)
+     visite_medicale = models.BooleanField(default=False)
+     telephone_contact_fam = models.CharField(max_length=255, blank=True, null=True)
+     bien_de_la_societe = models.CharField(max_length=255, blank=True, null=True)
+     destination = models.CharField(max_length=255, blank=True, null=True)
+     departement_bulletin = models.CharField(max_length=255, blank=True, null=True)
+     id_ligne=models.ManyToManyField('syspointage.ligne', blank=True)
+     id_supeurviseur=models.ManyToManyField('syspointage.superviseur', blank=True)
+     skill=models.ManyToManyField('syspointage.skill', blank=True)
+     
      def __str__(self):
         return str(self.email)
-
-     
+class skill (models.Model)  :
+    skillname=models.CharField(max_length=200)
+    def __str__(self):
+        return self.skillname
+class superviseur (models.Model)  :
+    superviseurname=models.CharField(max_length=200)
+    def __str__(self):
+        return self.superviseurname
+class ligne (models.Model)  :
+    lignename=models.CharField(max_length=200)
+    def __str__(self):
+        return self.lignename    
 class motif_abs(models.Model): 
     motif =  models.CharField(max_length=200 , null=True ,blank=True)
     motifConge=models.BooleanField(default=False)
@@ -298,7 +359,7 @@ class Conges(models.Model):
     #datetimereprise=models.DateTimeField(blank=True, null=True)
     commentaire=models.TextField(max_length=250 , null=True , blank=True  ) 
     validation=models.CharField(max_length=200,blank=True,null=True )
-    validationrh=models.IntegerField(max_length=200 , blank=True, null=True)
+    validationrh=models.IntegerField( blank=True, null=True)
     destination=models.CharField(max_length=200,blank=True,null=True )
     villedepart=models.CharField(max_length=200,blank=True,null=True )
     transport=models.CharField(max_length=200,blank=True,null=True )
@@ -307,11 +368,11 @@ class Conges(models.Model):
     matinfin=models.BooleanField(default=True)
     nbjoursmaladiecoupe=models.FloatField(blank=True, null=True)
     documentmaladie = models.FileField(upload_to ='media/', max_length=254,null=True,blank=True)   
-    validationrh2=models.IntegerField(max_length=200 , blank=True, null=True)
+    validationrh2=models.IntegerField( blank=True, null=True)
     remarquerh1=models.CharField(max_length=200,blank=True,null=True ) 
     remarquerh2=models.CharField(max_length=200,blank=True,null=True ) 
     remarqueemploye=models.CharField(max_length=200,blank=True,null=True ) 
-class JourFerie(models.Model):
+class JourFerie(models.Model):  
     nom=models.CharField(max_length=200,blank=True)
     etat_jour=models.CharField(max_length=200,blank=True)
     date= models.DateField(blank=False, null=False)
@@ -324,7 +385,7 @@ class Historique(models.Model):
     nouvellevaluer =  models.CharField(max_length=200 , blank=True, null=True)
     
     datenow=models.DateTimeField(default=datetime.now, blank=True)
-    idper_modifie=models.IntegerField(max_length=200 , blank=True, null=True)
+    idper_modifie=models.IntegerField( blank=True, null=True)
     valeursolde_ajoute=models.FloatField(blank=True, null=True)
     commentaire=models.TextField(max_length=255 , null=True , blank=True  ) 
     employe=models.ForeignKey( NewUser , blank=True, null=True,  on_delete=SET_DEFAULT,  default=None)
@@ -335,7 +396,7 @@ class Mouchard(models.Model):
     nouvellevaluer =  models.CharField(max_length=200 , blank=True, null=True)
     employe=models.ForeignKey(NewUser,max_length=200 , blank=True, null=True,on_delete=models.CASCADE)#on_delete=models.CASCADE
     datenow=models.DateTimeField(default=datetime.now, blank=True)
-    idper_modifie=models.IntegerField(max_length=200 , blank=True, null=True)
+    idper_modifie=models.IntegerField( blank=True, null=True)
     objet=models.CharField(max_length=200 , blank=True, null=True)
     def __str__(self):
         return str(self.employe)
@@ -369,7 +430,7 @@ class Pauses(models.Model):
     quota =models.IntegerField( blank=True, null=True,default=0)
     nbfois=models.IntegerField( blank=True, null=True,default=0)
     planifie=models.BooleanField(default=False)
-    idhoraire= models.ManyToManyField('syspointage.horairejour', blank=True , null=True)
+    idhoraire= models.ManyToManyField('syspointage.horairejour', blank=True )
     pausedejeuner=models.BooleanField(default=False)
 
     

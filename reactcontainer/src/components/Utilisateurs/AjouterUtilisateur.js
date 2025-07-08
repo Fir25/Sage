@@ -15,7 +15,7 @@ import 'react-dropdown-tree-select/dist/styles.css'
 
 import { Alert } from '@mui/material';
 
-
+import { MultiSelect } from '../MultiSelect';
 
 
 
@@ -53,7 +53,8 @@ const AjouterUtilisateur = () => {
   }
 
   const { data: roles, isloading, error } = useFetch(url+"role/")
-  
+  const { data: superviseurs, isloading:su, error:sup } = useFetch(url+"listsuperviseur/") 
+    const { data: skill, isloading:sk, error:ski } = useFetch(url+"listskill/") 
   const { data: plannings, isloading: lo, error: err } = useFetch(url+"planning/")
 
   const { data: TypesContrat = [], ll, oo } = useFetch(url+'contrats/')
@@ -65,8 +66,10 @@ const AjouterUtilisateur = () => {
   const [last_name, setlast_name] = useState('');
   const [matricule, setMatricule] = useState('');
   const [role, setRole] = useState('');
+  const [superviseur, setSuperviseur] = useState('');
   const [email, setEmail] = useState('');
-
+  const [selectedSuperviseurs, setSelectedSuperviseurs] = useState([]);
+  const [selectedSkill, setSelectedSkill] = useState([]);
   const [sex, setSexe] = useState('');
   const [planningemp, setPlaningEmp] = useState([]);
   const [matriculecnss, setMatriculeCNSS] = useState('')
@@ -88,9 +91,45 @@ const AjouterUtilisateur = () => {
   const [situation_sociale, setSituationSociale] = useState('');
   const[solde,setSolde]=useState(null)
   const[matriculepaie,setmatriculepaie]=useState('')
-  const[globale,setglobale]=useState('0')
+  // const[globale,setglobale]=useState('0')
   const[soldemaladie,setSoldeMaladie]=useState('0')
-  
+ 
+  const [poste, setPoste] = useState('');
+  const [typeTravail, setTypeTravail] = useState('');
+  const [fonction, setFonction] = useState('');
+  const [dateTitularisation, setDateTitularisation] = useState(null);
+  const [joursRestantsEcheance, setJoursRestantsEcheance] = useState('');
+  const [motifDepart, setMotifDepart] = useState('');
+  const [typeDepart, setTypeDepart] = useState('');
+  const [premierContratSage, setPremierContratSage] = useState('');
+  const [moisEmbauche, setMoisEmbauche] = useState('');
+  const [anneeEmbauche, setAnneeEmbauche] = useState('');
+  const [anneeTitularisation, setAnneeTitularisation] = useState('');
+  const [trancheAnciennete, setTrancheAnciennete] = useState('');
+  const [cleCnss, setCleCnss] = useState('');
+  const [dateDelivranceCIN, setDateDelivranceCIN] = useState(null);
+  const [situationFamiliale, setSituationFamiliale] = useState('');
+  const [niveauScolaire, setNiveauScolaire] = useState('');
+  const [categorie, setCategorie] = useState('');
+  const [echelon, setEchelon] = useState('');
+  const [prochaineDateEchelon, setProchaineDateEchelon] = useState(null);
+  const [typeSalaire, setTypeSalaire] = useState('');
+  const [coutHoraire, setCoutHoraire] = useState('');
+  const [ribBancaire, setRibBancaire] = useState('');
+  const [banque, setBanque] = useState('');
+  const [adresse, setAdresse] = useState('');
+  const [commune, setCommune] = useState('');
+  const [codePostal, setCodePostal] = useState('');
+  const [visiteMedicale, setVisiteMedicale] = useState(null);
+  const [telContactFamille, setTelContactFamille] = useState('');
+  const [bienSociete, setBienSociete] = useState('');
+  const [destination, setDestination] = useState('');
+  const [departementBulletin, setDepartementBulletin] = useState('');
+  // const [level, setLevel] = useState('');
+  const [fonctionPaie, setFonctionPaie] = useState('');
+  const [joursEcheance, setJoursEcheance] = useState('');
+  const [premierContrat, setPremierContrat] = useState('');
+  const [cleCNSS, setCleCNSS] = useState('');
   //const[image,setImage]=useState(null)
 
   //to preview image
@@ -189,7 +228,7 @@ const[alertdep,setAlertDep]=useState(false)
   
 
   event.preventDefault();
-   const userList = {soldemaladie,matriculepaie,globale, email,user_name,last_name, matricule, role, arborescence, planningemp, matriculecnss, sex, datedemarrage, datefin, rappel1, rappel2, démarrageContrat, datedenaissance, CIN, nbEnfants, tel, idcontrat, password, commentaire,  teletravail, situation_sociale, solde, is_active,activite,site , typepaie}
+   const userList = {soldemaladie,matriculepaie, email,user_name,last_name, matricule, role, arborescence, planningemp, matriculecnss, sex, datedemarrage, datefin, rappel1, rappel2, démarrageContrat, datedenaissance, CIN, nbEnfants, tel, idcontrat, password, commentaire,  teletravail, situation_sociale, solde, is_active,activite,site , typepaie, superviseur, poste, typeTravail, fonction, dateTitularisation, joursRestantsEcheance, motifDepart, typeDepart, premierContratSage, moisEmbauche, anneeEmbauche, anneeTitularisation, trancheAnciennete, cleCnss, dateDelivranceCIN, situationFamiliale, niveauScolaire, categorie, echelon, prochaineDateEchelon, typeSalaire, coutHoraire, ribBancaire, banque, adresse, commune, codePostal, visiteMedicale, telContactFamille, bienSociete, destination, departementBulletin }
     console.warn("item", userList)
     if(arborescence.length>1){
      setAlertDep(true)
@@ -375,7 +414,7 @@ setCheckAlert(true)
                      </div>
                    </div>
                  </div>
-                 <div className="col-md-4">
+                 {/* <div className="col-md-4">
                    <div className="form-group">
                      <div className="input-group input-group-merge input-group-alternative">
 
@@ -385,7 +424,7 @@ setCheckAlert(true)
 
                      </div>
                    </div>
-                 </div>
+                 </div> */}
 
 
 </div>
@@ -670,6 +709,58 @@ setCheckAlert(true)
                    </TextField>
 
                  </div>
+                 <div className='col-md-4'>
+    
+                   {/* <TextField
+                     id="outlined-select-currency"
+                     select
+                     label="superviseur"
+                     value={superviseur}
+                     onChange={(e) => { setSuperviseur(e.target.value) }}
+                     helperText="Svp sélectionnez un superviseur"
+                     margin='normal'
+                     fullWidth
+                   >
+                     {superviseurs.map((option) => (
+                       <MenuItem key={option.value} value={option.label}>
+                         
+                       </MenuItem>
+                     ))}
+                   </TextField > */}
+                   <label color='00000'>Superviseur </label>
+                   <MultiSelect 
+                    placeholder="Superviseur"
+            options={superviseurs} 
+            value={selectedSuperviseurs} 
+            onChange={  setSelectedSuperviseurs} 
+        />
+  </div>
+   <div className='col-md-4'>
+    
+                   {/* <TextField
+                     id="outlined-select-currency"
+                     select
+                     label="superviseur"
+                     value={superviseur}
+                     onChange={(e) => { setSuperviseur(e.target.value) }}
+                     helperText="Svp sélectionnez un superviseur"
+                     margin='normal'
+                     fullWidth
+                   >
+                     {superviseurs.map((option) => (
+                       <MenuItem key={option.value} value={option.label}>
+                         
+                       </MenuItem>
+                     ))}
+                   </TextField > */}
+                   <label color='00000'>Skill </label>
+                   <MultiSelect 
+                    placeholder="Superviseur"
+            options={skill} 
+            value={selectedSkill} 
+            onChange={  setSelectedSkill} 
+        />
+  </div>
                </div>
                <div className='row'>
 
@@ -714,6 +805,185 @@ setCheckAlert(true)
                 
 
                </div>
+               <div className="row">
+  
+               
+    
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Poste" value={poste} onChange={(e) => setPoste(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Type de travail" value={typeTravail} onChange={(e) => setTypeTravail(e.target.value)} type="text" />
+    </div>
+  </div>
+</div>
+
+<div className="row">
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Fonction/Fiche de Paie" value={fonctionPaie} onChange={(e) => setFonctionPaie(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Date pour titulariser" value={dateTitularisation} onChange={(e) => setDateTitularisation(e.target.value)} type="date" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Nombre de jours restants pour l'échéance" value={joursEcheance} onChange={(e) => setJoursEcheance(e.target.value)} type="number" />
+    </div>
+  </div>
+</div>
+
+<div className="row">
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Motif de départ" value={motifDepart} onChange={(e) => setMotifDepart(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Type de départ" value={typeDepart} onChange={(e) => setTypeDepart(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="1er Contrat Sage Tunisia" value={premierContrat} onChange={(e) => setPremierContrat(e.target.value)} type="text" />
+    </div>
+  </div>
+</div>
+
+<div className="row">
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Mois d'embauche" value={moisEmbauche} onChange={(e) => setMoisEmbauche(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Année d'embauche" value={anneeEmbauche} onChange={(e) => setAnneeEmbauche(e.target.value)} type="number" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Année de titularisation" value={anneeTitularisation} onChange={(e) => setAnneeTitularisation(e.target.value)} type="number" />
+    </div>
+  </div>
+</div>
+
+<div className="row">
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Tranche d'ancienneté" value={trancheAnciennete} onChange={(e) => setTrancheAnciennete(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Clé CNSS" value={cleCNSS} onChange={(e) => setCleCNSS(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Date de délivrance CIN" value={dateDelivranceCIN} onChange={(e) => setDateDelivranceCIN(e.target.value)} type="date" />
+    </div>
+  </div>
+</div>
+
+<div className="row">
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Situation familiale" value={situationFamiliale} onChange={(e) => setSituationFamiliale(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Niveau scolaire" value={niveauScolaire} onChange={(e) => setNiveauScolaire(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Catégorie" value={categorie} onChange={(e) => setCategorie(e.target.value)} type="text" />
+    </div>
+  </div>
+</div>
+
+<div className="row">
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Échelon" value={echelon} onChange={(e) => setEchelon(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Prochaine date d'échelon" value={prochaineDateEchelon} onChange={(e) => setProchaineDateEchelon(e.target.value)} type="date" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Type de salaire" value={typeSalaire} onChange={(e) => setTypeSalaire(e.target.value)} type="text" />
+    </div>
+  </div>
+</div>
+
+<div className="row">
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Coût horaire" value={coutHoraire} onChange={(e) => setCoutHoraire(e.target.value)} type="number" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="RIB bancaire" value={ribBancaire} onChange={(e) => setRibBancaire(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Banque" value={banque} onChange={(e) => setBanque(e.target.value)} type="text" />
+    </div>
+  </div>
+</div>
+
+<div className="row">
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Adresse" value={adresse} onChange={(e) => setAdresse(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Commune" value={commune} onChange={(e) => setCommune(e.target.value)} type="text" />
+    </div>
+  </div>
+
+  <div className="col-md-4">
+    <div className="form-group">
+      <input className="form-control" placeholder="Code postal" value={codePostal} onChange={(e) => setCodePostal(e.target.value)} type="text" />
+    </div>
+  </div>
+</div>
+
+
 
 
                <div className='row'>

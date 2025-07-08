@@ -225,12 +225,12 @@ useEffect(()=>{
       <div className="card shadow">
       <div className="card-header" id="colorcardheader">
       <div className="row">
-      <div className="col">
+      {/* <div className="col">
       <ImporterPointage/>
-      </div>
+      </div> */}
     
       
-      <div className="col">
+      {/* <div className="col">
   {datapointage.map(x => (
     <React.Fragment key={x.id}>
       <span style={{ marginRight: '10px' , fontSize: '18px' , fontWeight: 'bold' }}>Etat employé: {x.sortiepause === 1 ? "pause" : x.pausedejeuner === 1 ? "pause déjeuner" : x.sortie === 2 ? "absent" : "actif"}</span>
@@ -238,15 +238,15 @@ useEffect(()=>{
     </React.Fragment>
   ))}
   
-</div>
+</div> */}
     <div className='col' >
     {startTime && <TimeCounter hoursDifference={startTime}  />}
     </div>
-      <div className="col">
+      {/* <div className="col">
      
   <h2>Tickets restaurant : {ticketrestau}</h2> 
       
-      </div>
+      </div> */}
 
       </div>
       

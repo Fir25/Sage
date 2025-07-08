@@ -3,6 +3,8 @@ import ImporterPointeuse from './ImporterPoineteuse'
 import useFetch from '../useFetch';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CloudDownloadIcon from '@mui/icons-material/CloudDownload';
+
 import { makeStyles } from '@mui/styles';
 import { useState } from 'react';
 import Button from '@mui/material/Button';
@@ -18,7 +20,7 @@ import frdatatable from '../../frdatatable.json'
 import { useSelector } from 'react-redux';
 function CrudPointeuse() {
   const token = localStorage.getItem('access_token') ? 'Bearer ' +localStorage.getItem('access_token') :null
-
+  const [downloadStatus, setDownloadStatus] = useState(null);
  const[alerterror,setAlertError]=useState(false)
   const url=process.env.React_App_URL;
   const userinfo =useSelector(state => state.userinfo);
@@ -26,15 +28,17 @@ function CrudPointeuse() {
   if(Object.keys(userinfo).length !=0){ 
     var pointeusesedit=test['pointeuseedit']
    var pointeusedelete=test['pointeusedelete']
-  
   }
-  const { data: pointeuses = [], loadin, err } = useFetch(url+"pointeuse/")
+  const { data: pointeuses = [], loadin, err } = useFetch(url+"pointeuseconnectelist/")
   const [nom_pointeuse, setNomPointeuse] = useState('')
   const [port, setPort] = useState('')
   const [SIV, setSIV] = useState('')
   const [adresse_ip, setAdresseIP] = useState('')
+  const [etat, setEtat] = useState(true);
   const [pointeuseId, setPointeuseID] = useState(null)
   const [open, setOpen] = useState(false);
+  const [opend, setOpend] = useState(false);
+
   const [pointeuseIddelete, setpointeuseIddelete] = useState(null)
 
   const handleClickOpen = () => {
@@ -44,11 +48,21 @@ function CrudPointeuse() {
   const handleClose = () => {
     setOpen(false);
   };
+  const handleClosed = () => {
+    setOpend(false);
+   setDownloadStatus('');
+  };
   const useStyle = makeStyles({
     icon: {
       marginRight: 10,
       marginLeft: 10,
       color: '#5ac2df'
+
+
+
+
+
+
 ,
 
     },
@@ -58,7 +72,8 @@ function CrudPointeuse() {
     }
   });
   const classes = useStyle()
-  function SelectPointeuse(id) {
+  function SelectPointeuse(id)
+ {
     fetch(url+"pointeuse/" + id, {method: 'GET', 
     headers: {
       'Content-Type': 'application/json',
@@ -72,6 +87,7 @@ function CrudPointeuse() {
         setSIV(resp.SIV);
         setAdresseIP(resp.adresse_ip);
         setPointeuseID(resp.id);
+         setEtat(resp.etat);
 
       })
     }).catch((e) => {
@@ -80,6 +96,11 @@ function CrudPointeuse() {
           logoutfunction(e.response.status)
         } */
   })
+
+
+
+
+
   }
   const DeletePointeuse = (pointeuseId) => {
     fetch(url+'pointeuse/' + pointeuseId, {
@@ -102,10 +123,32 @@ function CrudPointeuse() {
 
 
   }
+  const downloadp  = (pointeuseId) => {
+    fetch(url+'download-attendance/' + pointeuseId  +'/', {
+      method: 'GET',
+      headers: {
 
+        'Content-Type': 'application/json',
+        Authorization: token,
+      },
+    }).then((response) => {
+      if (response.status === 200) {
+        setDownloadStatus('success');
+      } else {
+        setDownloadStatus('error');
+      }
+    }
+    ).catch((e) => {
+
+      setDownloadStatus('error');
+
+  })
+
+
+  }
   const UpdatePointeuse = () => {
 
-    let pointeuseList = { nom_pointeuse, port, adresse_ip, SIV }
+    let pointeuseList = { nom_pointeuse, port, adresse_ip, SIV,etat }
     console.warn("item", pointeuseList)
     setAlertError(false)
 
@@ -168,10 +211,9 @@ function CrudPointeuse() {
       <h3 style={{color:"white"}}>Pointeuses</h3>
       </div> */}
 <div className="card-header border-0">
-  {
-    pointeusesedit == true &&   <ImporterPointeuse />
-  }
-          
+  
+      <ImporterPointeuse/>
+      
             </div>
             <ScrollContainer>
             <div className="table-responsive">
@@ -183,7 +225,8 @@ function CrudPointeuse() {
                     <th scope="col">Nom de la Pointeuse</th>
                     <th scope="col">Adresse IP</th>
                     <th scope="col">Port</th>
-                  
+                    <th scope="col">status</th>
+
                     <th scope="col">Device ID</th>
                     <th scope="col">Action</th>
 
@@ -196,26 +239,82 @@ function CrudPointeuse() {
                       <td>{pointeuse.nom_pointeuse}</td>
                       <td>{pointeuse.adresse_ip}</td>
                       <td>{pointeuse.port}</td>
+                      <td>{pointeuse.is_connected == true ? "connectée" : "non connectée" }</td>
+
                       <td>{pointeuse.SIV}</td>
 
                       <td>
-                        <div className="row">
-                         { pointeusesedit == true && <div className="col-md-6">
+                      <div className="row">
+  {pointeusesedit && (
+    <div className="col-md-12 d-flex justify-content-between align-items-center">
+      <a
+        onClick={() => {
+          setOpend(true);
+          downloadp(pointeuse.id);
+        }}
+        
+      >
+        <CloudDownloadIcon className={classes.icon} />
+      </a>
 
-                            <a onClick={() => SelectPointeuse(pointeuse.id)} data-toggle="modal" data-target="#updatePointeuse" ><EditIcon
-                              className={classes.icon}
-                            /></a>
-                          </div>}
-                       {  pointeusedelete == true &&  <div className="col-md-6">
-                            <a onClick={() => { handleClickOpen(); setpointeuseIddelete(pointeuse.id); }}  ><DeleteIcon className={classes.icon} /></a>
+      <a
+        onClick={() => {
+          SelectPointeuse(pointeuse.id);
+        }}
+        data-toggle="modal"
+        data-target="#updatePointeuse"
+      >
+        <EditIcon className={classes.icon} />
+      </a>
 
-
-                          </div>}
-                        </div>
+      {pointeusedelete && (
+        <a
+          onClick={() => {
+            handleClickOpen();
+            setpointeuseIddelete(pointeuse.id);
+          }}
+        >
+          <DeleteIcon className={classes.icon} />
+        </a>
+      )}
+    </div>
+  )} 
+</div>
                       </td>
                     </tr>
 
                   )}
+                   <Dialog
+      BackdropProps={{ invisible: true }}
+      open={opend}
+      onClose={handleClosed}
+      aria-labelledby="download-dialog-title"
+      aria-describedby="download-dialog-description"
+    >
+      <DialogTitle id="download-dialog-title">
+        {"Téléchargement de Pointage"}
+      </DialogTitle>
+      <DialogContent>
+        {downloadStatus === null && (
+          <DialogContentText id="download-dialog-description">
+            Le téléchargement est en cours, veuillez patienter...
+          </DialogContentText>
+        )}
+        {downloadStatus === 'success' && (
+          <DialogContentText id="download-dialog-description" style={{ color: 'green' }}>
+            Téléchargement réussi !
+          </DialogContentText>
+        )}
+        {downloadStatus === 'error' && (
+          <DialogContentText id="download-dialog-description" style={{ color: 'red' }}>
+            Échec du téléchargement.
+          </DialogContentText>
+        )}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClosed}>Fermer</Button>
+      </DialogActions>
+    </Dialog>
                   <Dialog
 
                     BackdropProps={{ invisible: true }}
@@ -295,6 +394,12 @@ function CrudPointeuse() {
                           <input className="custom-control-input" id=" customCheckLogin" type="checkbox" />
 
                         </div>
+                        Entrée
+  <input
+    type="checkbox"
+    checked={etat}
+    onChange={(e) => setEtat(e.target.checked)}
+  />
                         <div className="text-center">
                           <button type="button" className="btn btn-primary my-4" onClick={UpdatePointeuse}> Enregistrer</button>
                         </div>
@@ -312,3 +417,8 @@ function CrudPointeuse() {
   )
 }
 export default CrudPointeuse;
+
+
+
+
+

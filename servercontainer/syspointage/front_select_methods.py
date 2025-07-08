@@ -6,11 +6,87 @@ from datetime import datetime
 from django.http import HttpResponse,JsonResponse
 from rest_framework.permissions import AllowAny
 from django.db import connection
+class ligneselect(APIView):
+   permission_classes = [AllowAny]
+   def get(self,request):
+       q="SELECT id, lignename from syspointage_ligne "
+       cursor = connection.cursor()
+       cursor.execute(q)
+       data = cursor.fetchall()  
+       listligne=[]
+       if data : 
+        for obj in data:
+          
+             listligne.append({"label":obj[1] ,"value":obj[0]})
+        return JsonResponse(listligne, safe=False) 
+class superviseurselect(APIView):
+   permission_classes = [AllowAny]
+   def get(self,request):
+       q="SELECT id, superviseurname from syspointage_superviseur "
+       cursor = connection.cursor()
+       cursor.execute(q)
+       data = cursor.fetchall()  
+       listsuperviseur=[]
+       if data : 
+        for obj in data:
+          
+             listsuperviseur.append({"label":obj[1] ,"value":obj[0]})
+        return JsonResponse(listsuperviseur, safe=False) 
+class skillselect(APIView):
+   permission_classes = [AllowAny]
+   def get(self,request):
+       q="SELECT id, skillname from syspointage_skill "
+       cursor = connection.cursor()
+       cursor.execute(q)
+       data = cursor.fetchall()  
+       listskill=[]
+       if data : 
+        for obj in data:
+          
+             listskill.append({"label":obj[1] ,"value":obj[0]})
+        return JsonResponse(listskill, safe=False)
+class SuperviseurDelete(APIView):
+    permission_classes = [AllowAny]
 
+    def delete(self, request, id):
+        """
+        Supprime un superviseur par son ID.
+        """
+        try:
+            cursor = connection.cursor()
+            q = "DELETE FROM syspointage_superviseur WHERE id = %s RETURNING id"
+            cursor.execute(q, [id])
+            deleted_id = cursor.fetchone()
+
+            if deleted_id:
+                return JsonResponse({"message": "Superviseur supprimé avec succès."}, status=200)
+            else:
+                return JsonResponse({"error": "Superviseur non trouvé."}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+class SkillDelete(APIView):
+    permission_classes = [AllowAny]
+
+    def delete(self, request, id):
+        """
+        Supprime un skil par son ID.
+        """
+        try:
+            cursor = connection.cursor()
+            q = "DELETE FROM syspointage_skill WHERE id = %s RETURNING id"
+            cursor.execute(q, [id])
+            deleted_id = cursor.fetchone()
+
+            if deleted_id:
+                return JsonResponse({"message": "Skill supprimé avec succès."}, status=200)
+            else:
+                return JsonResponse({"error": "Skill non trouvé."}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
 class UserlistForSelect(APIView):
    permission_classes = [AllowAny]
    def get(self,request):
-       q="SELECT u.id, u.user_name , u.last_name from syspointage_newuser as u  "
+       q="SELECT u.id, u.user_name , u.last_name , u.matricule from syspointage_newuser as u  "
        cursor = connection.cursor()
        cursor.execute(q)
        data = cursor.fetchall()  
@@ -18,9 +94,9 @@ class UserlistForSelect(APIView):
        if data : 
         for obj in data:
            if obj[2] :
-             listuser.append({"label":obj[1] +' '+ obj[2] ,"value":obj[0]})
+             listuser.append({"label":obj[1] +' '+ obj[2] + ' ' + obj[3],"value":obj[0]})
            else : 
-             listuser.append({"label":obj[1] ,"value":obj[0]})
+             listuser.append({"label":obj[1] + ' ' + obj[3] ,"value":obj[0]})
        return JsonResponse(listuser, safe=False) 
 class motiflistForSelect(APIView):
    permission_classes = [AllowAny]

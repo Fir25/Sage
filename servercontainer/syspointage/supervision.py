@@ -47,38 +47,38 @@ class rapportwfm(generics.ListAPIView):
                   etatemp = "pause (%s)"%(typedepause[0].get('nom'))   
                if plist[-1].get('etat') == 1 and plist[-1].get('idpause_id')== None   : 
                   etatemp = "sortie"   
-               queryplanning = NewUser.objects.filter(id=int(obj[0])).prefetch_related('planningemp')
-               if queryplanning.exists():
-                   listaidplanings = list(queryplanning[0].planningemp.values('id'))
+               # queryplanning = NewUser.objects.filter(id=int(obj[0])).prefetch_related('planningemp')
+               # if queryplanning.exists():
+               #     listaidplanings = list(queryplanning[0].planningemp.values('id'))
 
-                   testplaning = SearchPlaning(str(dateaujourdhui), listaidplanings)
+               #     testplaning = SearchPlaning(str(dateaujourdhui), listaidplanings)
 
-                   if testplaning != False:
-                         parameters = searchDay(str(dateaujourdhui), int(obj[0]), testplaning)
-                         horaire = parameters[12]
+               #     if testplaning != False:
+                  parameters = searchDay(str(dateaujourdhui), int(obj[0]))
+                  horaire = parameters[12]
                 
 
-                         pau = list(Pauses.objects.filter(idhoraire=horaire, planifie=True).values())
-                         pointagepausedej = list(
-                         pointage.objects.filter(employes=int(obj[0]),
+                  pau = list(Pauses.objects.filter(idhoraire=horaire, planifie=True).values())
+                  pointagepausedej = list(
+                  pointage.objects.filter(employes=int(obj[0]),
                                                   date_pointage__date=dateaujourdhui ,idpause__pausedejeuner=True ).values())                            
-                         totdej =  calcul_temps_sortie_entree(pointagepausedej)
+                  totdej =  calcul_temps_sortie_entree(pointagepausedej)
                     
-                         pointagepause = list(
-                         pointage.objects.filter(employes=int(obj[0]),
+                  pointagepause = list(
+                  pointage.objects.filter(employes=int(obj[0]),
                                                     date_pointage__date=dateaujourdhui ,idpause__isnull=False , idpause__pausedejeuner=False , idpause__planifie=True ).values())
-                         totpause = calcul_temps_sortie_entree(pointagepause)
+                  totpause = calcul_temps_sortie_entree(pointagepause)
                     
                     
-                         pointagepausenonpla = list(
-                            pointage.objects.filter(employes=int(obj[0]),
+                  pointagepausenonpla = list(
+                  pointage.objects.filter(employes=int(obj[0]),
                                                     date_pointage__date=dateaujourdhui ,idpause__isnull=False , idpause__pausedejeuner=False , idpause__planifie=False ).values())
-                         totpausenonpla = calcul_temps_sortie_entree(pointagepausenonpla) 
+                  totpausenonpla = calcul_temps_sortie_entree(pointagepausenonpla) 
                     
-                         pointagelogg = list(
-                            pointage.objects.filter(employes=int(obj[0]),
+                  pointagelogg = list(
+                  pointage.objects.filter(employes=int(obj[0]),
                                                     date_pointage__date=dateaujourdhui ,idpause__isnull=True ).values())
-                         totlog = calcul_temps_sortie_entree(pointagelogg)
+                  totlog = calcul_temps_sortie_entree(pointagelogg)
                     
                     
                if etatemp != "absent"  :   

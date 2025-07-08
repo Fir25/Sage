@@ -37,7 +37,7 @@ class Demandeconges(APIView):
          Q(datedebut__range=(self.kwargs['date1'], self.kwargs['date2'])) |
             Q(datefin__range=(self.kwargs['date1'], self.kwargs['date2']))
             )
-         if verifconge : 
+         if verifconge.exists(): 
              
              return Response({"vous avez deja une demande en cours "}, status=400)
       #   verifauto = Conges.objects.filter(
@@ -54,10 +54,10 @@ class Demandeconges(APIView):
             
             if conge:
               
-               if self.kwargs['type']=="conge":#si la demande est une congé 
+               #if self.kwargs['type']=="conge":#si la demande est une congé 
 
                   #NewUser.objects.filter(id=request.data.get('employes')).update(soldemaladie=kwargs['soldenouveau'])#modifier le solde de maladie d'utilisateur connecté
-                  NewUser.objects.filter(id=request.data.get('employes')).update(solde=kwargs['soldenouveau'])#modifier le solde d'utlisateur connecté             
+                  #NewUser.objects.filter(id=request.data.get('employes')).update(solde=kwargs['soldenouveau'])#modifier le solde d'utlisateur connecté             
                emailcheff=''
                aa=NewUser.objects.filter(id=(self.kwargs['pk']))
                attributes=aa.values('user_name','last_name','email')[0]#get the values of user 
@@ -77,17 +77,17 @@ class Demandeconges(APIView):
 
                objet = str("IPS Time: Demande de "+self.kwargs['type']+" transmise")
                message = str( "<p style='line-height: 300%;'>Bonjour "+str(user_name) +" "+str(last_name)+" ,<br> Vous avez fait une demande de "+str(self.kwargs['type'])+" du " +str(self.kwargs['date1']) +" au "+str(self.kwargs['date2'])+".<br> Votre demande a bien été envoyée à votre valideur <br> Cette demande est en attente de validation. Elle n'est pas valable si elle n'est pas validée ou refusée. <br> Merci de relancer votre demande par mail si besoin urgent. <br>IPS Time Tunisie </p>")
-               if aaemail and objet and message:
+            #    if aaemail and objet and message:
                     
                     
-                try:
-                  send_email_template(objet , message , [aaemail]) 
-                  send_email_template(objetv1 , messagev1 , mailsofv)
-                  return Response({"status": "true"}, status=status.HTTP_200_OK)
-                except Exception as e:
-                   return Response({"status": "Couldn't send the email: " + str(e)}, status=status.HTTP_400_BAD_REQUEST)
-               else:
-                  return Response({"status": "Missing email, objet, or message in the request"}, status=status.HTTP_400_BAD_REQUEST)
+            #     try:
+            #       send_email_template(objet , message , [aaemail]) 
+            #       send_email_template(objetv1 , messagev1 , mailsofv)
+            #       return Response({"status": "true"}, status=status.HTTP_200_OK)
+            #     except Exception as e:
+            #        return Response({"status": "Couldn't send the email: " + str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            #    else:
+            #       return Response({"status": "Missing email, objet, or message in the request"}, status=status.HTTP_400_BAD_REQUEST)
                
   
         return JsonResponse({"succes":"true"},safe=False)
@@ -228,7 +228,9 @@ class ListValidation(APIView):
             INNER JOIN syspointage_newuser AS nu ON nu.id = c.employes_id
             INNER JOIN syspointage_motif_abs AS m ON m.id = c.motif_abs_id
             INNER JOIN syspointage_newuser_arborescence as nua on nua.newuser_id = c.employes_id
-            WHERE wc.departement_id = nua.arborescence_id and ((v1.newuser_id = {str(pk)} )  OR (v2.newuser_id = {str(pk)})   OR (v3.newuser_id = {str(pk)} )  OR (v4.newuser_id = {str(pk)}  )) AND CAST(m.{motif} AS bit) = 1
+            WHERE wc.departement_id = nua.arborescence_id and ((v1.newuser_id = {str(pk)} )  OR (v2.newuser_id = {str(pk)})   OR (v3.newuser_id = {str(pk)} )  OR (v4.newuser_id = {str(pk)}  )) AND m.{motif} = TRUE
+
+
             """
 
             cursor = connection.cursor()

@@ -114,7 +114,7 @@ WSGI_APPLICATION = 'pointage.wsgi.application'
 
 
 # Database
-# https://docs.djangoproject.com/en/3.2/ref/settings/#databases
+# https://docs.djangoproject.com/e3.2/ref/settings/#databases
 
 
 # DATABASES = {
@@ -123,8 +123,7 @@ WSGI_APPLICATION = 'pointage.wsgi.application'
 #         'NAME': os.environ['NAME'],  
 #         'USER': os.environ['USER'],
 #         'PASSWORD': os.environ['PASSWORD'],
-#         'HOST': os.environ['HOST'],
-#         'PORT': os.environ['PORT'],
+#         'HOST': os.environ['HOST']#         'PORT': os.environ['PORT'],
 #         'OPTIONS': {
 #             'driver': os.environ['DRIVER'],
 #             'TrustServerCertificate': os.environ['TRUST_SERVER_CERTIFICATE'],
@@ -132,15 +131,16 @@ WSGI_APPLICATION = 'pointage.wsgi.application'
 #     },
 # }
 
+
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ['NAME'],  
-        'USER': os.environ['USER'],
-        'PASSWORD': os.environ['PASSWORD'],
-        'HOST': os.environ['HOST'],  
-        'PORT': os.environ['PORT'],  
-       
+        'ENGINE': 'django.db.backends.postgresql',  # PostgreSQL backend
+        'NAME': 'ipstime',                          # Database name
+        'USER': 'root',                             # Username
+        'PASSWORD': 'root',                         # Password
+        'HOST': '192.168.1.113',                    # Host IP
+        'PORT': '5432',                             # Port number
     }
 }
 

@@ -44,52 +44,256 @@ from django.template import loader
 from django.utils import timezone, dateparse
 import threading
 from . calcul_func import * 
-from . rapport_journalier import Rapportunjour 
+from . rapport_journalier import Rapportunjour
+from . rapport_journal import Rapportunjoure
+
 from . rapport_mensuel import rapportmensul
 from . send_mail import send_email_template
 from . valideurs_emails import get_validators_for_conge_and_department
+import socket
+from zk import ZK
+def reset_all_passwords_to_test():
+    new_password = 'test'
+    for user in NewUser.objects.all():
+        user.set_password(new_password)
+        user.save()
+    print("All passwords have been updated to 'test'.")
+class DownloadAttendanceView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, pointeuse_id):
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT adresse_ip, port, id FROM syspointage_pointeuse WHERE id = %s", [pointeuse_id])
+                pointeuse = cursor.fetchone()
+
+                if not pointeuse:
+                    return JsonResponse({"error": "Pointeuse not found"}, status=404)
+
+                ip_address = pointeuse[0]
+                port = int(pointeuse[1])
+
+                zk = ZK(ip_address, port=port, timeout=65, force_udp=False, ommit_ping=True)
+
+                try:
+                    conn = zk.connect()
+
+                    attendances = conn.get_attendance()
+
+                    for single in attendances:
+                        att = str(single).split()
+
+                        if att[3] and att[4]:
+                            pointagedate = att[3] + " " + att[4]
+                            matricule = att[1]
+
+                            try:
+                                test = int(matricule)
+
+                                cursor.execute(
+                                    "SELECT id FROM syspointage_newuser WHERE matricule_p = %s", [matricule]
+                                )
+                                user_result = cursor.fetchone()
+
+                                if user_result:
+                                    cursor.execute("""
+                                        SELECT id FROM syspointage_pointage 
+                                        WHERE date_pointage = %s 
+                                        AND employes_id = %s
+                                    """, [pointagedate, user_result[0]])
+                                    existing_attendance = cursor.fetchone()
+
+                                    if not existing_attendance:
+                                        cursor.execute("""
+                                            INSERT INTO syspointage_pointage (date_pointage, employes_id, pointeuse_id)
+                                            VALUES (%s, %s, %s)
+                                        """, [pointagedate, user_result[0], pointeuse[2]])
+                                        connection.commit()
+
+                            except ValueError:
+                                print(f"Invalid matricule: {matricule}")
+
+                    return JsonResponse({"message": "Attendance data downloaded and saved successfully"}, status=200)
+
+                except Exception as zk_exception:
+                    return JsonResponse({"error": f"Failed to connect to the device: {zk_exception}"}, status=500)
+
+                finally:
+                    if conn:
+                        conn.disconnect()
+
+        except Exception as e:
+              return JsonResponse({"error": str(e)}, status=500)
+
+
+
+
+
+
+
+class AjouterSuperviseur(APIView):
+    def post(self, request):
+        data = request.data
+        superviseurs_ids = data.get('superviseurs', [])  # Liste des IDs envoyés depuis React
+
+        if not superviseurs_ids:
+            return JsonResponse({"message": "Aucun superviseur sélectionné"}, status=400)
+
+        # Récupérer les labels depuis la table `syspointage_newuser`
+        cursor = connection.cursor()
+        query = "SELECT id, user_name, last_name, matricule FROM syspointage_newuser WHERE id IN %s"
+        cursor.execute(query, (tuple(superviseurs_ids),))  # Paramètre sécurisé
+        users = cursor.fetchall()
+
+        # Ajouter les superviseurs avec le label complet
+        for user in users:
+            user_id, user_name, last_name, matricule = user
+            superviseur_label = f"{user_name} {last_name} {matricule}" if last_name else f"{user_name} {matricule}"
+            superviseur.objects.create(id=user_id, superviseurname=superviseur_label)  # Stocke le label directement
+
+        return JsonResponse({"message": "Superviseurs ajoutés avec succès"}, status=201)
+class Pointeuseconnectelist(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        cursor = connection.cursor()
+        cursor.execute("SELECT id, nom_pointeuse, adresse_ip,  port,etat  FROM syspointage_pointeuse")
+        data = cursor.fetchall()
+        json_data = []
+        for obj in data:
+            pointeuse_id = obj[0]
+            nom_pointeuse = obj[1]
+            adresse_ip = obj[2]
+            port = obj[3]
+            etat=obj[4]
+            is_connected = False
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(0.5)
+            try:
+                sock.connect((adresse_ip, int(port)))  # Correcting the IP and port assignment
+                is_connected = True  # Reachability confirmed
+                sock.close()
+            except socket.error:
+                is_connected = False  # If there's an error, it's disconnected
+            zk = ZK(adresse_ip, port=int(port), timeout=0.5, ommit_ping=True)
+
+            try:
+                conn = zk.connect()  # Attempt to connect to the device
+                conn.disconnect()
+                is_connected = True  # Device is successfully connected
+            except Exception as e:
+                print(f"Connection failed after reachability check: {e}")
+                is_connected = False  # Device not connected
+            json_data.append({
+                "id": pointeuse_id,
+                "nom_pointeuse": nom_pointeuse,
+                "adresse_ip": adresse_ip,
+                "port": port,
+                "etat":etat,
+                "is_connected": is_connected,
+            })
+
+        return JsonResponse(json_data , safe=False)
 class UsersOfChef(generics.ListAPIView):
     permission_classes = [AllowAny]
+    
     def get(self, request, pk):
-        listEmployes=[]
-        a=arborescence.objects.values().all()#get list of departments
-        u=False
-        c=NewUser.objects.select_related('role').filter(role__DRH=True,id=self.kwargs['pk'])#quand utilisateur est connecté est un DRH  =>c est non vide
-        pp=NewUser.objects.values().filter(is_superuser=True,id=self.kwargs['pk'])#quand utilisateur est connecté est un admin => utilisateur est non vide 
-        if pp or c :# admin or DRH
-                 #select all employees 
-                 querr="SELECT u.matricule,u.user_name,r.rolename,a.nom,u.id,u.email,u.datedemarrage,u.last_name,u.activite ,s.nomsite,is_active , u.sex , u.matriculecnss ,u.datedemarrage,  u.datedenaissance,u.CIN, u.nbEnfants, u.tel,u.commentaire, u.situation_sociale, u.teletravail,u.activite, u.matriculepaie, u.solde from syspointage_newuser as u left join syspointage_role as r on r.id=u.role_id  left join syspointage_newuser_arborescence as ua on ua.newuser_id=u.id left join syspointage_arborescence as a on a.id=ua.arborescence_id LEFT JOIN syspointage_site as s on s.id=u.site_id"
-                 #is_active=1 c'a dire emlpoyés non partis ont un compte active
-                 ccc=connection.cursor()
-                 ccc.execute(querr)
-                 employes=ccc.fetchall()
-                 json_data = []
-                 for objj in employes:
-                      #remplir la liste d'employés 
-                    json_data.append({"matricule":objj[0],"user_name":objj[1],"role":objj[2],"Nomarbo":objj[3],'id':objj[4],"email":objj[5],"datedemarrage":objj[6],"last_name":objj[7],"activite":objj[8],"site":objj[9],"is_active":objj[10],"sex":objj[11],"matriculecnss":objj[12],"datedemarrage":objj[13],"datedenaissance":objj[14],"CIN":objj[15],"nbEnfants":objj[16],"tel":objj[17],"commentaire":objj[18],"situation_sociale":objj[19],"teletravail":objj[20],"activite":objj[21],"matriculepaie":objj[22] , "solde":objj[23]})
-                 listEmployes.extend(list(json_data))
-                
-                 return JsonResponse(listEmployes, safe=False)
+        listEmployes = []
+        a = arborescence.objects.values().all()  # Liste des départements
+        c = NewUser.objects.select_related('role').filter(role__DRH=True, id=self.kwargs['pk'])  # Vérification DRH
+        pp = NewUser.objects.values().filter(is_superuser=True, id=self.kwargs['pk'])  # Vérification Admin
+        
+        if pp or c:  # Admin ou DRH
+            # Requête SQL pour sélectionner tous les employés avec les nouveaux champs
+            querr = """
+                SELECT u."matricule", u."user_name", r."rolename", a."nom", u."id", u."email", 
+                       u."datedemarrage", u."last_name", u."activite", s."nomsite", u."is_active", 
+                       u."sex", u."matriculecnss", u."datedemarrage", u."datedenaissance", 
+                       u."CIN", u."nbenfants", u."tel", u."commentaire", u."situation_sociale", 
+                       u."teletravail", u."activite", u."matriculepaie", u."solde", 
+                       u."superviseur", u."poste", u."type_de_travail", u."fonction_fiche_de_paie", 
+                       u."date_titularisation", u."nbre_jours_restants_echeance", u."motifparti", 
+                       u."type_depart", u."premier_contrat_sage_tunisia", u."mois_embauche", 
+                       u."annee_embauche", u."annee_titularisation", u."tranche_anciennete", 
+                       u."cle_cnss", u."date_delivrance_cin", u."niveau_scolaire", u."categorie", 
+                       u."echelon", u."prochaine_date_echelon", u."type_salaire", u."cout_h", 
+                       u."rib_banquaire", u."banque", u."adresse", u."commune", u."code_postale", 
+                       u."visite_medicale", u."telephone_contact_fam", u."bien_de_la_societe", 
+                       u."destination", u."departement_bulletin"
+                FROM "syspointage_newuser" AS u
+                LEFT JOIN "syspointage_role" AS r ON r."id" = u."role_id"
+                LEFT JOIN "syspointage_newuser_arborescence" AS ua ON ua."newuser_id" = u."id"
+                LEFT JOIN "syspointage_arborescence" AS a ON a."id" = ua."arborescence_id"
+                LEFT JOIN "syspointage_site" AS s ON s."id" = u."site_id";
+            """
+            
+            ccc = connection.cursor()
+            ccc.execute(querr)
+            employes = ccc.fetchall()
+            json_data = []
+            for objj in employes:
+                json_data.append({
+                    "matricule": objj[0], "user_name": objj[1], "role": objj[2], "Nomarbo": objj[3],
+                    'id': objj[4], "email": objj[5], "datedemarrage": objj[6], "last_name": objj[7],
+                    "activite": objj[8], "site": objj[9], "is_active": objj[10], "sex": objj[11],
+                    "matriculecnss": objj[12], "datedemarrage": objj[13], "datedenaissance": objj[14],
+                    "CIN": objj[15], "nbEnfants": objj[16], "tel": objj[17], "commentaire": objj[18],
+                    "situation_sociale": objj[19], "teletravail": objj[20], "activite": objj[21],
+                    "matriculepaie": objj[22], "solde": objj[23], "superviseur": objj[24], 
+                    "poste": objj[25], "type_de_travail": objj[26], "fonction_fiche_de_paie": objj[27],
+                    "date_titularisation": objj[28], "nbre_jours_restants_echeance": objj[29], 
+                    "motif_depart": objj[30], "type_depart": objj[31], "premier_contrat_sage": objj[32], 
+                    "mois_embauche": objj[33], "annee_embauche": objj[34], "annee_titularisation": objj[35], 
+                    "tranche_anciennete": objj[36], "cle_cnss": objj[37], "date_delivrance_cin": objj[38], 
+                    "niveau_scolaire": objj[39], "categorie": objj[40], "echelon": objj[41], 
+                    "prochaine_date_echelon": objj[42], "type_salaire": objj[43], "cout_horaire": objj[44], 
+                    "rib_bancaire": objj[45], "banque": objj[46], "adresse": objj[47], "commune": objj[48], 
+                    "code_postal": objj[49], "visite_medicale": objj[50], "tel_contact_famille": objj[51], 
+                    "bien_societe": objj[52], "destination": objj[53], "departement_bulletin": objj[54], 
+                    
+                })
+            listEmployes.extend(list(json_data))
+            return JsonResponse(listEmployes, safe=False)
+        
         else:
-          
-      
-                  
-                     #query pour parccourir la liste children of departement
-                     query = 'SELECT u.matricule,u.user_name,r.rolename,a.nom,u.id,u.email,u.datedemarrage,u.last_name,u.activite ,s.nomsite,is_active , u.sex , u.matriculecnss ,u.datedemarrage,  u.datedenaissance,u.CIN, u.nbEnfants, u.tel,u.commentaire, u.situation_sociale, u.teletravail,u.activite, u.matriculepaie, u.solde FROM syspointage_newuser AS u LEFT JOIN   syspointage_role AS r ON r.id = u.role_id LEFT JOIN syspointage_newuser_arborescence AS ua ON ua.newuser_id = u.id LEFT JOIN syspointage_arborescence AS a ON a.id = ua.arborescence_id LEFT JOIN syspointage_arborescence_chefs AS uo ON a.id = uo.arborescence_id LEFT JOIN syspointage_site as s on s.id=u.site_id WHERE uo.newuser_id= %s'%pk
-                  
-                     cursor = connection.cursor()
-                     cursor.execute(query)
-                     data = cursor.fetchall()
-                     json_data=[]
-                     for objj in data:
-                           #remplir la liste des employés dans département et sous départements
-                           json_data.append({"matricule":objj[0],"user_name":objj[1],"role":objj[2],"Nomarbo":objj[3],'id':objj[4],"email":objj[5],"datedemarrage":objj[6],"last_name":objj[7],"activite":objj[8],"site":objj[9],"is_active":objj[10]})
-                     listEmployes.extend(list(json_data))  
-        return JsonResponse(listEmployes, safe=False)
+            # Deuxième requête pour les utilisateurs sous un chef de département spécifique
+            query = f"""
+                SELECT u.matricule, u.user_name, r.rolename, a.nom, u.id, u.email, u.datedemarrage,
+                       u.last_name, u.activite, s.nomsite, u.is_active, u.sex, u.matriculecnss, 
+                       u.datedemarrage, u.datedenaissance, u.CIN, u.nbEnfants, u.tel, u.commentaire,
+                       u.situation_sociale, u.teletravail, u.activite, u.matriculepaie, u.solde
+                FROM syspointage_newuser AS u
+                LEFT JOIN syspointage_role AS r ON r.id = u.role_id
+                LEFT JOIN syspointage_newuser_arborescence AS ua ON ua.newuser_id = u.id
+                LEFT JOIN syspointage_arborescence AS a ON a.id = ua.arborescence_id
+                LEFT JOIN syspointage_arborescence_chefs AS uo ON a.id = uo.arborescence_id
+                LEFT JOIN syspointage_site AS s ON s.id = u.site_id
+                WHERE uo.newuser_id = %s
+            """ % pk
+
+            cursor = connection.cursor()
+            cursor.execute(query)
+            data = cursor.fetchall()
+            json_data = []
+            for objj in data:
+                json_data.append({
+                    "matricule": objj[0], "user_name": objj[1], "role": objj[2], "Nomarbo": objj[3],
+                    'id': objj[4], "email": objj[5], "datedemarrage": objj[6], "last_name": objj[7],
+                    "activite": objj[8], "site": objj[9], "is_active": objj[10], "sex": objj[11],
+                    "matriculecnss": objj[12], "datedemarrage": objj[13], "datedenaissance": objj[14],
+                    "CIN": objj[15], "nbEnfants": objj[16], "tel": objj[17], "commentaire": objj[18],
+                    "situation_sociale": objj[19], "teletravail": objj[20], "activite": objj[21],
+                    "matriculepaie": objj[22], "solde": objj[23]
+                })
+            listEmployes.extend(list(json_data))
+            return JsonResponse(listEmployes, safe=False)
+
+    
 class EmployesPartis(generics.ListAPIView):
-  queryset=NewUser.objects.filter(is_active=False).all()#is_active false==>utilisateur non connecté=> employé parti 
-  serializer_class=CustomUserSerializer
-  permission_classes = [AllowAny]
+    queryset = NewUser.objects.filter(is_active=False)  # Fetch inactive users
+    serializer_class = CustomUserSerializer  # Serializer to use for output
+    permission_classes = [AllowAny]  # Open access to this view
+
 
 class QuitterEmploye(generics.RetrieveUpdateAPIView):
   def get(self,request,**kwargs):
@@ -97,131 +301,306 @@ class QuitterEmploye(generics.RetrieveUpdateAPIView):
       return JsonResponse({"status":"success"}, safe=False)      
 class SetEquipeView(APIView):
     def post(self, request):
-        user_ids = request.data.get('userIds', [])  # Use request.data to access JSON data
+        user_ids = request.data.get('userIds', [])
         equipe_id = request.data.get('equipeId')
 
-        # Delete the existing team for the given equipe_id
-        NewUser.objects.filter(equipe_id=equipe_id).update(equipe=None)
+        try:
+            # Fetch the team by id, raise 404 if not found
+            equipe = Equipe.objects.get(id=equipe_id)
 
-        users = NewUser.objects.filter(id__in=user_ids)
-        equipe = Equipe.objects.get(id=equipe_id)
+            # Remove current team association for the users in the team
+            NewUser.objects.filter(equipe_id=equipe_id).update(equipe=None)
 
-        for user in users:
-            user.equipe = equipe
-            user.save()
+            # Fetch the new users who will be assigned to this team
+            users = NewUser.objects.filter(id__in=user_ids)
 
-        # Return a response if needed
-        return Response({"message": "Equipe updated successfully"})
+            for user in users:
+                user.equipe = equipe  # Assign the team
+                user.save()
+
+            return Response({"message": "Equipe updated successfully"})
+        
+        except Equipe.DoesNotExist:
+            return Response({"message": "Equipe not found"}, status=404)
+        except Exception as e:
+            return Response({"message": f"An error occurred: {str(e)}"}, status=500)
+
        
+# class UsersOfDepartement(APIView):
+#     permission_classes = [AllowAny]
+
+#     def get(self, request, **kwargs):
+#         listEmployes = []
+
+#         # Vérifier si les paramètres existent et ne sont pas vides
+#         listids = request.query_params.getlist('id')
+#         activite = request.query_params.getlist('idactivite')
+#         ligne = request.query_params.getlist('idligne')
+
+#         # Si la liste est vide, assigner une valeur par défaut
+#         listids = listids[0].split(',') if listids else []
+#         activite = activite[0].split(',') if activite else []
+#         ligne = ligne[0].split(',') if ligne else []
+
+#         # Convertir 'activite' en boolean si nécessaire
+#         activite = [value.lower() in ['true', '1', 'si', 'yes'] for value in activite]
+
+#         for idd in listids:
+#             if idd:
+#                 idarboresence = int(idd)
+#                 query = '''
+#                     WITH RECURSIVE children AS (
+#                         SELECT id 
+#                         FROM syspointage_arborescence 
+#                         WHERE id=%s
+#                         UNION ALL
+#                         SELECT a.id
+#                         FROM syspointage_arborescence a
+#                         JOIN children c ON a.parent_id = c.id
+#                     )
+#                     SELECT id FROM children;
+#                 '''
+
+#                 cursor = connection.cursor()
+#                 cursor.execute(query, [idarboresence])
+#                 data = cursor.fetchall()
+
+#                 for obj in data:
+#                     query_params = [obj[0]]
+
+#                     quer = '''
+#                     SELECT u.user_name, u.id, u.last_name, u.email, u.datedemarrage, u.activite, u.site_id, u.matricule, l.lignename
+#                     FROM syspointage_newuser_arborescence ua 
+#                     JOIN syspointage_arborescence a ON a.id = ua.arborescence_id
+#                     JOIN syspointage_newuser u ON ua.newuser_id = u.id 
+#                     JOIN syspointage_ligne l ON l.id = u.id_ligne
+#                     LEFT JOIN syspointage_role r ON r.id = u.role_id
+#                     WHERE ua.arborescence_id = %s   AND u.is_active = ANY(%s::boolean[])
+#                    AND (
+#                          %s IS NULL OR l.id_ligne_id = ANY(string_to_array(%s, ',')::int[])
+#                         );'''
+                    
+
+                 
+
+#                     # Ajouter la condition sur `ligne` seulement si `ligne` est fourni
+#                     if ligne:
+#                         quer +=  '''AND (
+#                          %s IS NULL OR l.id_ligne_id = ANY(string_to_array(%s, ',')::int[])
+#                         );'''
+#                         query_params.append(ligne)
+
+#                     cursor.execute(quer, query_params)
+#                     employes = cursor.fetchall()
+
+#                     json_data = []
+#                     for objj in employes:
+#                         label = f"{objj[0]} {objj[2]} {objj[7]}" if objj[2] or objj[0] or objj[7] else "inconnu"
+
+#                         json_data.append({
+#                             "label": label,
+#                             "value": objj[1],
+#                             "email": objj[3],
+#                             "datedemarrage": objj[4],
+#                             "activite": objj[5],
+#                             "site": objj[6],
+#                             "ligne": objj[8],
+#                         })
+
+#                     listEmployes.extend(json_data)
+
+#         return JsonResponse(listEmployes, safe=False)
+
+class Usersdepequipe(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, **kwargs):
+        listEmployes = []
+        listids = request.query_params.getlist('id')[0].split(',')  # IDs of departments
+
+        for idd in listids:
+            if idd:
+                idarborescence = int(idd)
+
+                # Recursive CTE to get all sub-departments of the selected department
+                query = '''
+                    WITH RECURSIVE children AS (
+                        SELECT id FROM syspointage_arborescence WHERE id = %s
+                        UNION ALL
+                        SELECT sa.id FROM children c
+                        JOIN syspointage_arborescence sa ON sa.parent_id = c.id
+                    )
+                    SELECT id FROM children;
+                '''
+                cursor = connection.cursor()
+                cursor.execute(query, [idarborescence])
+                data = cursor.fetchall()
+
+                for obj in data:
+                    sub_dept_id = obj[0]  # Extract the department ID from the fetched result
+                    
+                    # Query to get employees associated with this sub-department
+                    quer = '''
+                        SELECT u.user_name, u.id, u.last_name, u.email, u.datedemarrage, u.activite, u.site_id
+                        FROM syspointage_newuser_arborescence ua
+                        JOIN syspointage_arborescence a ON a.id = ua.arborescence_id
+                        JOIN syspointage_newuser u ON ua.newuser_id = u.id
+                        LEFT JOIN syspointage_role r ON r.id = u.role_id
+                        WHERE ua.arborescence_id = %s;
+                    '''
+                    cc = connection.cursor()
+                    cc.execute(quer, [sub_dept_id])
+                    employes = cc.fetchall()
+
+                    json_data = []
+                    for emp in employes:
+                        json_data.append({
+                            "label": f"{emp[0]} {emp[2]}",
+                            "value": emp[1],
+                            "email": emp[3],
+                            "datedemarrage": emp[4],
+                            "activite": emp[5],
+                            "site": emp[6]
+                        })
+
+                    listEmployes.extend(json_data)
+
+        return JsonResponse(listEmployes, safe=False)            
+
 class UsersOfDepartement(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request, **kwargs):
         listEmployes = []
-        listids = request.query_params.getlist('id')[0].split(',')
-        activite = request.query_params.getlist('idactivite')[0].split(',')
 
+        listids = request.query_params.getlist('id')
+        activite = request.query_params.getlist('idactivite')
+        ligne = request.query_params.getlist('idligne')
+        superviseur = request.query_params.getlist('idsuperviseur')
+
+        # Vérifiez si les listes contiennent des éléments avant de les utiliser
+        listids = listids[0].split(',') if listids and listids[0] else []
+        activite = [value.lower() in ['true', '1', 'si', 'yes'] for value in (activite[0].split(',') if activite and activite[0] else [])]
+        ligne_list = ligne[0].split(',') if ligne and ligne[0] else []  # Vérification ligne
+        superviseur_list = superviseur[0].split(',') if superviseur and superviseur[0] else [] 
         for idd in listids:
             if idd:
                 idarboresence = int(idd)
-                query = 'WITH children AS (SELECT syspointage_arborescence.id FROM syspointage_arborescence WHERE id=%s UNION ALL SELECT syspointage_arborescence.id FROM children, syspointage_arborescence WHERE syspointage_arborescence.parent_id = children.id) SELECT syspointage_arborescence.id FROM syspointage_arborescence, children WHERE children.id = syspointage_arborescence.id' % str(idarboresence)
-
+                
+                query = """
+                    WITH RECURSIVE children AS (
+                        SELECT id FROM syspointage_arborescence WHERE id = %s
+                        UNION ALL
+                        SELECT a.id FROM syspointage_arborescence a
+                        JOIN children c ON a.parent_id = c.id
+                    )
+                    SELECT id FROM children;
+                """
                 cursor = connection.cursor()
-                cursor.execute(query)
-                data = cursor.fetchall()
+                cursor.execute(query, [idarboresence])
+                data = [row[0] for row in cursor.fetchall()]
 
-                for obj in data:
-                    if activite and any(activite):  # Check if activite is not empty and contains non-None values
-                        quer = "SELECT u.user_name, u.id, u.last_name, u.email, u.datedemarrage, u.activite, u.site_id FROM syspointage_newuser_arborescence AS ua, syspointage_arborescence AS a, syspointage_newuser AS u LEFT JOIN syspointage_role AS r ON r.id=u.role_id WHERE ua.arborescence_id=%s AND ua.newuser_id=u.id AND a.id=ua.arborescence_id AND u.activite IN (%s)" % (str(int(''.join(map(str, obj)))), (','.join(activite)))
-                    else:
-                        quer = "SELECT u.user_name, u.id, u.last_name, u.email, u.datedemarrage, u.activite, u.site_id FROM syspointage_newuser_arborescence AS ua, syspointage_arborescence AS a, syspointage_newuser AS u LEFT JOIN syspointage_role AS r ON r.id=u.role_id WHERE ua.arborescence_id=%s AND ua.newuser_id=u.id AND a.id=ua.arborescence_id" % str(int(''.join(map(str, obj))))
+                query_params = [tuple(data)]
 
-                    cc = connection.cursor()
-                    cc.execute(quer)
-                    employes = cc.fetchall()
+                quer = """
+                    SELECT u.user_name, u.id, u.last_name, u.email, u.datedemarrage, 
+                           u.activite, u.site_id, u.matricule
+                    FROM syspointage_newuser_arborescence ua
+JOIN syspointage_arborescence a ON a.id = ua.arborescence_id
+JOIN syspointage_newuser u ON ua.newuser_id = u.id
+LEFT JOIN syspointage_ligne l ON l.id = u.id_ligne
+LEFT JOIN syspointage_newuser_superviseur us ON us.newuser_id = u.id  -- Correction ici
+LEFT JOIN syspointage_superviseur s ON s.id = us.superviseur_id
+LEFT JOIN syspointage_role r ON r.id = u.role_id
+                    WHERE ua.arborescence_id IN %s
+                  
+                """
+                if activite:
+                    quer += " AND u.is_active = ANY(%s::boolean[])"
+                    query_params.append(activite)
+                if len(ligne_list) > 0 :
+                    quer += " AND (u.id_ligne = ANY(%s::int[])) "
+                    query_params.append(ligne_list)
 
-                    json_data = []
-                    for objj in employes:
-                        if objj[2] is not None:
-                            label = objj[0] + " " + objj[2]
-                        else:
-                             label = objj[0]
+                if len(superviseur_list) > 0 :
+                    
+                    quer += " AND (us.superviseur_id = ANY(%s::int[])) "
+                    query_params.append(superviseur_list)
 
-                        json_data.append({
-                               "label": label,
-    "value": objj[1],
-    "email": objj[3],
-    "datedemarrage": objj[4],
-    "activite": objj[5],
-    "site": objj[6]
-})
+                cursor.execute(quer, query_params)
+                employes = cursor.fetchall()
+                
+                json_data = [
+                    {
+                        "label": f"{objj[0]} {objj[2]} {objj[7]}" if objj[2] or objj[0] or objj[7] else "inconnu",
+                        "value": objj[1],
+                        "email": objj[3],
+                        "datedemarrage": objj[4],
+                        "activite": objj[5],
+                        "site": objj[6],
+                    }
+                    for objj in employes
+                ]
 
-                    listEmployes.extend(list(json_data))
+                listEmployes.extend(json_data)
+
         return JsonResponse(listEmployes, safe=False)
-class Usersdepequipe(APIView):
-    permission_classes = [AllowAny]
-    
-    def get(self,request,**kwargs):
-        listEmployes=[]
-        listids=request.query_params.getlist('id')[0].split(',')#ids of id departement(url) (choisi dans le front par l'utlisateur)
-     
-        for idd in listids:
-            
-            if idd:
-               idarboresence=int(idd)
-               #parcourir la liste des sous départements de département sélectionné
-               query = 'WITH children  AS  (SELECT syspointage_arborescence.id FROM syspointage_arborescence WHERE id=%s UNION ALL SELECT syspointage_arborescence.id FROM children, syspointage_arborescence WHERE syspointage_arborescence.parent_id = children.id) SELECT syspointage_arborescence.id FROM syspointage_arborescence, children WHERE children.id = syspointage_arborescence.id'%idarboresence
-               
-               cursor = connection.cursor()
-               cursor.execute(query)
-               data = cursor.fetchall()
-         
-               l=[]
-               for obj in data:
-                  
-                  
-                  #quer="SELECT u.user_name,u.id,u.last_name,u.démarrageContrat,u.email,u.datedemarrage,u.datefin,u.rappel1,u.rappel2,u.activite,u.site_id from syspointage_newuser_arborescence as ua,syspointage_arborescence as a,syspointage_newuser as u   left join syspointage_role as r on  r.id=u.role_id where ua.arborescence_id =%s and ua.newuser_id=u.id  and a.id=ua.arborescence_id and u.activite in (%s) and u.site_id in (%s)"%(str(int(''.join(map(str, obj)))),(','.join(activite)),(','.join(site)))
-                  quer="SELECT u.user_name,u.id,u.last_name,u.email,u.datedemarrage,u.activite,u.site_id from syspointage_newuser_arborescence as ua,syspointage_arborescence as a,syspointage_newuser as u   left join syspointage_role as r on  r.id=u.role_id where ua.arborescence_id =%s and ua.newuser_id=u.id  and a.id=ua.arborescence_id "%(str(int(''.join(map(str, obj)))))
-            
-                  cc=connection.cursor()
-                  cc.execute(quer)
-                  employes=cc.fetchall()
 
-                  json_data = []
-                  for objj in employes:
-                     json_data.append({"label":str(objj[0]+" "+objj[2]),"value":objj[1],"email":objj[3],"datedemarrage":objj[4],"activite":objj[5],"site":objj[6]})
-
-                  listEmployes.extend(list(json_data))
-        return JsonResponse(listEmployes, safe=False)                
-               
 class TestUsersOfDepartement(APIView):
     permission_classes = [AllowAny]
+
     def get(self, request):
-        listEmployes=[]
-        listids=request.query_params.getlist('id')[0].split(',')
-        
+        listEmployes = []
+        listids = request.query_params.getlist('id')[0].split(',')
+
         for idd in listids:
-            
-            
-            idarboresence=int(idd)
-            query = 'WITH children  AS  (SELECT syspointage_arborescence.id FROM syspointage_arborescence WHERE id=%s UNION ALL SELECT syspointage_arborescence.id FROM children, syspointage_arborescence WHERE syspointage_arborescence.parent_id = children.id) SELECT syspointage_arborescence.id FROM syspointage_arborescence, children WHERE children.id = syspointage_arborescence.id'%idarboresence
-             
+            idarboresence = int(idd)
+
+            # Updated recursive query for PostgreSQL using WITH RECURSIVE
+            query = """
+            WITH RECURSIVE children AS (
+                SELECT id FROM syspointage_arborescence WHERE id = %s 
+                UNION ALL
+                SELECT a.id FROM syspointage_arborescence a
+                JOIN children c ON a.parent_id = c.id
+            )
+            SELECT id FROM children;
+            """
             cursor = connection.cursor()
-            cursor.execute(query)
+            cursor.execute(query, [idarboresence])
             data = cursor.fetchall()
+
             for obj in data:
-                  
-                quer="SELECT u.user_name,u.id,u.last_name,u.email,u.datedemarrage from syspointage_newuser_arborescence as ua,syspointage_arborescence as a,syspointage_newuser as u   left join syspointage_role as r on  r.id=u.role_id where ua.arborescence_id =%s and ua.newuser_id=u.id  and a.id=ua.arborescence_id"%str(int(''.join(map(str, obj))))
-                cc=connection.cursor()
-                cc.execute(quer)
-                employes=cc.fetchall()
+                # Use parameterized query for fetching employees
+                quer = """
+                SELECT u.user_name, u.id, u.last_name, u.email, u.datedemarrage
+                FROM syspointage_newuser_arborescence ua
+                JOIN syspointage_arborescence a ON ua.arborescence_id = a.id
+                JOIN syspointage_newuser u ON ua.newuser_id = u.id
+                LEFT JOIN syspointage_role r ON r.id = u.role_id
+                WHERE ua.arborescence_id = %s;
+                """
+                cc = connection.cursor()
+                cc.execute(quer, [obj[0]])  # obj[0] contains the id from the recursive query
+                employes = cc.fetchall()
+                nom=""
 
                 json_data = []
                 for objj in employes:
-                    json_data.append({"label":str(objj[0]+" "+objj[2]),"value":objj[1],"email":objj[3],"datedemarrage":objj[4]})
+                    if objj[2]:
+                        nom=str(objj[0] + " " + objj[2])
+                    else : 
+                        nom =objj[0]
+                    json_data.append({
+                        "label": nom, 
+                        "value": objj[1],
+                        "email": objj[3],
+                        "datedemarrage": objj[4]
+                    })
 
-                listEmployes.extend(list(json_data))
-        return JsonResponse(listEmployes, safe=False)                 
+                listEmployes.extend(json_data)
+
+        return JsonResponse(listEmployes, safe=False)               
 class Userlist(generics.ListAPIView):
       queryset =NewUser.objects.all()
       serializer_class = CustomUserSerializer
@@ -309,7 +688,7 @@ class CustomUserCreate(APIView):
         serializer = CustomUserSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-          
+            
             if user:
                 json = serializer.data
                 data={}
@@ -330,7 +709,7 @@ class CustomUserCreate(APIView):
  
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 class GetUserById(generics.RetrieveAPIView):
-   queryset=NewUser.objects.prefetch_related('planningemp','arborescence').select_related('role','site').all()
+   queryset=NewUser.objects.prefetch_related('arborescence').select_related('role','site').all()
    #preftched_related=>many to many relation
    #selected_related=>one to many relation
 
@@ -379,88 +758,83 @@ class workflowbyiddep(APIView):#demande congés autorisation mission
            json_data.append({"nom":obj[0],"departement_id":obj[1],"type_conge_id":obj[2],"valideur_1_id":obj[3],"valideur_2_id":obj[4],"valideur_3_id":obj[5],"valideur_4_id":obj[6] , "id":obj[7] , "nommotif":obj[8]})
        return JsonResponse(json_data, safe=False)
 class CreatePointage(APIView):
-      permission_classes = [AllowAny]
+    permission_classes = [AllowAny]
 
-      def post(self, request,**kwargs):
-          print('rrrrrr',request.data)
-          data={}
-          
-          data['pointeuse']=request.data.get('pointeuse')
-          data['idpause']=request.data.get('idpause')
-          data['etat']=request.data.get('etat')
-          data['description']=request.data.get('description')
- 
-          #on fait cette boucle par ce que le chef peut sélectionner plusieurs employés et les affecté en pause(active contact)
-          for obj in request.data.get('employes'):
-              data['employes']=obj
+    def post(self, request, **kwargs):
+        print('rrrrrr', request.data)
 
-              serializer = PointageSerializer(data=data) 
-              if serializer.is_valid():
-                 pp = serializer.save()
-     
+        date_pointage = request.data.get('date_pointage')
+        heure_pointage = request.data.get('heure_pointage')
+        motif = request.data.get('motif')
+        commentaire = request.data.get('commentaire')
+        employes = request.data.get('employes')  # <- Liste attendue ici
+        pointeuse = request.data.get('pointeuse')
+        if not isinstance(employes, list):
+            return Response({'error': 'employes must be a list'}, status=status.HTTP_400_BAD_REQUEST)
 
-          return Response('json', status=status.HTTP_201_CREATED)
+        for emp_id in employes:
+            data = {
+                'employes': emp_id,
+                'date_pointage': date_pointage,
+                'heure_pointage': heure_pointage,
+                'motif': motif,
+                'commentaire': commentaire,
+                'pointeuse':pointeuse,
+            }
+
+            serializer = PointageSerializer(data=data)
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                return Response({emp_id: serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({'success': True}, status=status.HTTP_201_CREATED)
+   
+
 class UpdatePointage(generics.RetrieveUpdateAPIView):
     queryset=pointage.objects.all()
     serializer_class=PointageSerializer
     permission_classes = [AllowAny]
 class PointageRetrieve(generics.RetrieveAPIView):
-    
     queryset = pointage.objects.all()
     serializer_class = PointageSerializer 
-    permission_classes = [AllowAny]
-
+    permission_classes = [AllowAny] 
 class DeletePointage(generics.DestroyAPIView):
    queryset=pointage.objects.all()
    serializer_class=PointageSerializer
    permission_classes = [AllowAny]
-
-
-class Motiflist(generics.ListCreateAPIView):
-        
+class Motiflist(generics.ListCreateAPIView): 
     queryset = motif_abs.objects.all()
     serializer_class = MotifabsSerializer
     permission_classes = [AllowAny]
-   
 class Motifupdate(generics.RetrieveUpdateDestroyAPIView):
-    
     queryset = motif_abs.objects.all()
     serializer_class = MotifabsSerializer     
     permission_classes = [AllowAny]
-class Horairejourlist(generics.ListCreateAPIView):
-        
+class Horairejourlist(generics.ListCreateAPIView):      
     queryset = horairejour.objects.all()
     serializer_class = HoraireJourSerializer
     permission_classes = [AllowAny]
-   
 class HoraireJourupdate(generics.RetrieveUpdateDestroyAPIView):
-    
     queryset = horairejour.objects.all()
     serializer_class = HoraireJourSerializer
     permission_classes = [AllowAny]
-class Plansemainelist(generics.ListCreateAPIView):
-        
+class Plansemainelist(generics.ListCreateAPIView):    
     queryset = plansemaine.objects.all()
     serializer_class = PlanSemaineSerializer
     permission_classes = [AllowAny]
-   
 class plansemaineupdate(generics.RetrieveUpdateDestroyAPIView):
-    
     queryset = plansemaine.objects.all()
     serializer_class = PlanSemaineSerializer
     permission_classes = [AllowAny]
-    
-class Planninglist(generics.ListCreateAPIView):
-        
+class Planninglist(generics.ListCreateAPIView):   
     queryset = planning.objects.all()
     serializer_class = PlanningSerializer
     permission_classes = [AllowAny]
 class PlanningDelete(generics.RetrieveUpdateDestroyAPIView):
-    
     queryset = planning.objects.all()
     serializer_class = PlanningSerializer  
     permission_classes = [AllowAny] 
-
 class updateUserbyplanning(APIView):
    permission_classes = [AllowAny]
    def post(self, request, **kwargs):
@@ -476,30 +850,63 @@ class updateUserbyplanning(APIView):
 class RemoveUserbyplanning(APIView):
    permission_classes = [AllowAny]
    def get(self, request, **kwargs):
-
        iduser=kwargs['iduser']
        idplaningactuelle=kwargs['idplaningactuelle']
        user=NewUser.objects.get(id=int(iduser))
        #user.planningemp.clear()  
        user.planningemp.get(id=idplaningactuelle) #séléctionner planning actuelle selecté
        user.planningemp.remove(idplaningactuelle)#effacer planning actuelle selecté
- 
        return Response('json', status=status.HTTP_201_CREATED)
-
-
 #when user click on planning=>show list of users
 class GetUsersbyplanings(generics.RetrieveAPIView):
     permission_classes = [AllowAny]
-    def get(self,request,pk):
-        cursor=connection.cursor()
-        id=self.kwargs['pk']
-        cursor.execute('select u.matricule,u.user_name,p.title,p.id,u.id,u.last_name,u.id,p.id from syspointage_newuser  as u  left join   syspointage_planning as p on p.employe_id=u.pid WHERE p.id=%s'%id)
+    
+    def get(self, request, pk):
+        cursor = connection.cursor()
+        
+        # Use a parameterized query to prevent SQL injection
+        query = '''
+            SELECT 
+                u.matricule, 
+                u.user_name, 
+                p.title, 
+                p.id, 
+                u.id, 
+                u.last_name, 
+                u.id, 
+                p.id 
+            FROM 
+                syspointage_newuser AS u  
+            LEFT JOIN   
+                syspointage_planning AS p 
+            ON 
+                p.employe_id = u.id  -- Changed u.pid to u.id, assuming 'id' is correct
+            WHERE 
+                p.id = %s
+        '''
+        
+        # Execute the query with parameterization
+        cursor.execute(query, [pk])  # 'pk' is passed safely to the query
+        
+        # Fetch all the results
         data = cursor.fetchall()
-        json_data = []
-        for obj in data:
-
-            json_data.append({"matricule":obj[0],"user_name":obj[1],"nomplanning":obj[2],"idplanactuelle":obj[3],"iduser":obj[4],"last_name":obj[5],"iduseractuelle":obj[6],"idplanning":obj[7]})
-
+        
+        # Prepare the response in JSON format
+        json_data = [
+            {
+                "matricule": obj[0],
+                "user_name": obj[1],
+                "nomplanning": obj[2],
+                "idplanactuelle": obj[3],
+                "iduser": obj[4],
+                # "last_name": obj[5],
+                "iduseractuelle": obj[6],
+                "idplanning": obj[7]
+            }
+            for obj in data
+        ]
+        
+        # Return the JSON response
         return JsonResponse(json_data, safe=False)
 
 
@@ -507,19 +914,90 @@ class CreateplaningByDep(APIView):
       permission_classes = [AllowAny]
 
       def post(self, request, **kwargs):
-        list_ids = request.query_params.getlist('id')[0].split(',') 
-        serializer = PlanningSerializer(data=request.data)
+        # Get the list of employee IDs from query parameters
+        listids = request.query_params.getlist('id')[0].split(',')
         
+        # Serialize the planning data
+        serializer = PlanningSerializer(data=request.data)
         if serializer.is_valid():
+            # Save the planning instance
             planning = serializer.save()
-            for obj_id in list_ids:
-                user = NewUser.objects.get(id=int(obj_id))
-                planning.employe = user  
-                planning.save()  
-                
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+            # Fetch all users in one query using filter and update their ManyToMany field
+            users = NewUser.objects.filter(id__in=[int(id)for id in listids])
+            for user in users:
+                user.planningemp.add(planning)  # Add the planning to each selected user
+
+            return Response({'detail': 'Planning assigned to employees successfully'}, status=status.HTTP_201_CREATED)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    #     class CreatePointage(APIView):
+    #   permission_classes = [AllowAny]
+
+    #   def post(self, request,**kwargs):
+    #       print('rrrrrr',request.data)
+    #       data={}
+          
+    #       data['pointeuse']=request.data.get('pointeuse')
+    #       data['idpause']=request.data.get('idpause')
+    #       data['etat']=request.data.get('etat')
+    #       data['description']=request.data.get('description')
+ 
+    #       #on fait cette boucle par ce que le chef peut sélectionner plusieurs employés et les affecté en pause(active contact)
+    #       for obj in request.data.get('employes'):
+    #           data['employes']=obj
+
+    #           serializer = PointageSerializer(data=data) 
+    #           if serializer.is_valid():
+    #              pp = serializer.save()
+     
+
+    #       return Response('json', status=status.HTTP_201_CREATED)
+class CreateAbsences(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request, **kwargs):
+        print('Données reçues:', request.data)
+
+        # Extraire uniquement les IDs des employés
+        employes = [emp.get('id') if isinstance(emp, dict) else emp for emp in request.data.get('employes', [])]
+        
+        # Vérifier si la liste d'employés est vide ou si un ID est None
+        if not employes or any(emp is None for emp in employes):
+            return Response({"error": "Aucun employé valide sélectionné"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Récupérer les autres données de l'absence
+        data = {
+            'raison': request.data.get('raison'),
+            'datedebut': request.data.get('datedebut'),
+            'datefin': request.data.get('datefin'),
+            'motif_abs': request.data.get('motif_abs'),
+            'justifie': request.data.get('justifie'),
+            'heure_debut': request.data.get('heure_debut'),
+            'heure_fin': request.data.get('heure_fin'),
+        }
+
+        # Liste des absences créées
+        absences_crees = []
+
+        # Création d'une absence pour chaque employé sélectionné
+        for employe_id in employes:
+            absence_data = data.copy()
+            absence_data['employes'] = employe_id  # Assigner l'ID de l'employé
+
+            serializer = AbsenceSerializer(data=absence_data)
+            if serializer.is_valid():
+                absence = serializer.save()
+                absences_crees.append(absence.id)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({
+            'detail': f'Absences créées pour {len(absences_crees)} employés',
+            'absences': absences_crees
+        }, status=status.HTTP_201_CREATED)
+
+
 
 class ContratList(generics.ListCreateAPIView):
     queryset=contrat.objects.all()
@@ -576,16 +1054,16 @@ def SearchpourDemandeConge(request,**kwargs):# quand utilisateur sélectionne da
       existjourferierepos=0
       nbjoursmaladiecoupe=0
       for single_date in daterange(datetime.strptime(str(kwargs['date1']),"%Y-%m-%d").date(), datetime.strptime(str(kwargs['date2']),"%Y-%m-%d").date()):
-         testplaning=SearchPlaning(str(single_date),listaidplanings)#sélectionner le planning de date actuelle
+        #  testplaning=SearchPlaning(str(single_date),listaidplanings)#sélectionner le planning de date actuelle
          jourferies=jourferies+JourFerie.objects.filter(date__lte=single_date, datefin__gte=single_date).count()#nombre de jours féries dans cette période
          
-         if testplaning!=False:
-            s=searchDay(str(single_date),kwargs['id'],testplaning)#cette fonction renvoie les détails d'horaire de l' employé connecté 
-            if s==["00:00:00",zero,zero,zero,zero,"00:00:00",zero,zero,zero,zero,"0","0",[],"","0"]:
+         
+        #  s=searchDay(str(single_date),kwargs['id'],testplaning)#cette fonction renvoie les détails d'horaire de l' employé connecté 
+        #  if s==["00:00:00",zero,zero,zero,zero,"00:00:00",zero,zero,zero,zero,"0","0",[],"","0"]:
                
-               repos+=1
-               if JourFerie.objects.filter(date__lte=single_date, datefin__gte=single_date).exists():
-                  existjourferierepos=existjourferierepos+1
+        #        repos+=1
+        #        if JourFerie.objects.filter(date__lte=single_date, datefin__gte=single_date).exists():
+        #           existjourferierepos=existjourferierepos+1
    
          
       
@@ -701,7 +1179,82 @@ class updatedeletesite(generics.RetrieveUpdateDestroyAPIView):
     serializer_class=SiteSerializer 
     permission_classes = [AllowAny]
 
+class listsuperviseur(generics.ListCreateAPIView):
+    queryset = superviseur.objects.all()
+    serializer_class = superviseurSerializer
+    permission_classes = [AllowAny]
 
+    def create(self, request, *args, **kwargs):
+        print("Requête POST reçue:", request.data)
+
+        superviseurs_data = request.data.get('superviseurs', [])
+        if not superviseurs_data:
+            return Response({"detail": "Aucun superviseur fourni."}, status=status.HTTP_400_BAD_REQUEST)
+
+        for superviseur_data in superviseurs_data:
+            superviseur_id = superviseur_data.get('superviseurname')
+
+            try:
+                # ⚠️ Assure-toi que le modèle "NewUser" contient les superviseurs
+                user = NewUser.objects.get(id=superviseur_id)
+            except NewUser.DoesNotExist:
+                return Response({"error": f"Utilisateur avec ID {superviseur_id} non trouvé."},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            # Remplace l'ID par le nom réel
+            superviseur_nom = user.last_name + " " + user.user_name  # ou autre combinaison
+
+            serializer = self.get_serializer(data={"superviseurname": superviseur_nom})
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"message": "Superviseurs ajoutés avec succès!"}, status=status.HTTP_201_CREATED)
+
+
+
+class updatedeletesuperviseur(generics.RetrieveUpdateDestroyAPIView):
+    queryset=superviseur.objects.all()
+    serializer_class=superviseurSerializer 
+    permission_classes = [AllowAny]
+class listskille(generics.ListCreateAPIView):
+    queryset = skill.objects.all()
+    serializer_class = skillSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        print("Requête POST reçue:", request.data)
+
+        skills_data = request.data.get('skills', [])
+        if not skills_data:
+            return Response({"detail": "Aucune compétence fournie."}, status=status.HTTP_400_BAD_REQUEST)
+
+        for skill_data in skills_data:
+            skill_name = skill_data.get('skillname')
+
+            serializer = self.get_serializer(data={"skillname": skill_name})
+            if serializer.is_valid():
+                serializer.save()
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"message": "Compétences ajoutées avec succès!"}, status=status.HTTP_201_CREATED)
+
+
+
+class updatedeleteskill(generics.RetrieveUpdateDestroyAPIView):
+    queryset=skill.objects.all()
+    serializer_class=skillSerializer 
+    permission_classes = [AllowAny]
+class createlistligne(generics.ListCreateAPIView):
+    queryset=ligne.objects.all()
+    serializer_class=ligneSerializer
+    permission_classes = [AllowAny]
+class updatedeleteligne(generics.RetrieveUpdateDestroyAPIView):
+    queryset=ligne.objects.all()
+    serializer_class=ligneSerializer 
+    permission_classes = [AllowAny]
 class createequipe(generics.ListCreateAPIView):
     queryset=Equipe.objects.all()
     serializer_class=EquipeSerializer
@@ -740,7 +1293,7 @@ class ChartsParJourneeDynamique(APIView):
 
                
                 #appel au fonction Rapportunjour =>retourner une liste 
-                a=Rapportunjour(int(u),str(single_date))
+                a=Rapportunjoure(int(u),str(single_date))
 
                 if a:
                    jsondata.append({"motif":a[0]["motif"], "lateEntree":a[0]["lateEntree"]})#remplir la liste json data
@@ -779,210 +1332,316 @@ class ChartsParJourneeDynamique(APIView):
 class MyTokenObtainPairView(TokenObtainPairView):
     #authentification with token
     serializer_class = MyTokenObtainPairSerializer
-class HistoriqueDemendesConges(APIView):#demande congés autorisation mission
-   permission_classes = [AllowAny]
-   def get(self, request,pk):
-      
-       cursor = connection.cursor()
-       idemploye=self.kwargs['pk']
-       qq="SELECT n.user_name,c.validation,c.datedebut,c.datefin,m.motif,n.solde,c.heure_debut,c.heure_fin,c.date_autorisation,c.id,c.mission,c.validation,c.validationrh,c.destination,n.last_name FROM syspointage_newuser as n inner join  syspointage_conges as c  on c.employes_id=n.id left join  syspointage_motif_abs as m on c.motif_abs_id=m.id  where c.validationrh=1 and c.validationrh2=2 and n.id=%s and c.teletravail=%s order by c.datedebut"%(idemploye,"0")
-       print(qq)
-       cursor.execute(qq)
-       
-       data = cursor.fetchall()
-       json_data = []
-       for obj in data:
-           json_data.append({"user_name":obj[0],"validation":obj[1],"datedebut":obj[2],"datefin":obj[3],"motif":obj[4],"solde":obj[5],"heure_debut":obj[6],"heure_fin":obj[7],"date_autorisation":obj[8],"idconge":obj[9],"mission":obj[10],"validation":obj[11],"validationrh":obj[12],"destination":obj[13],"last_name":obj[14]})
-       return JsonResponse(json_data, safe=False)
-      
-class SelectcongebyId(APIView):#demande congés autorisation mission
-   permission_classes = [AllowAny]
-   def get(self, request,pk):
-       cursor = connection.cursor()
-       idconge=self.kwargs['pk']
-       cursor.execute("SELECT n.user_name,c.validation,c.datedebut,c.datefin,m.motif,n.solde,c.heure_debut,c.heure_fin,c.date_autorisation,c.id,c.mission,n.last_name,n.matricule,c.commentaire,c.destination,c.validation,c.validationrh,c.nbjours,c.personneinterimaire_id,c.adresse,c.contact FROM syspointage_newuser as n inner join  syspointage_conges as c  on c.employes_id=n.id left join  syspointage_motif_abs as m on c.motif_abs_id=m.id where c.id=%s"%idconge)
-       p=''
-       data = cursor.fetchall()
-       json_data = []
-       for obj in data:
-           if obj[18]:
-              p=str(NewUser.objects.filter(id=int(obj[18])).values()[0].get('user_name'))
-           json_data.append({"user_name":obj[0],"validation":obj[1],"datedebut":obj[2],"datefin":obj[3],"motif":obj[4],"solde":obj[5],"heure_debut":obj[6],"heure_fin":obj[7],"date_autorisation":obj[8],"idconge":obj[9],"mission":obj[10],"last_name":obj[11],"matricule":obj[12],"commentaire":obj[13],"destination":obj[14],"validation":obj[15],"validationrh":obj[16],"nbjours":obj[17],"personneinterimaire":p,"adresse":obj[19],"contact":obj[20]})
-       return JsonResponse(json_data, safe=False)
-class RapportSemaine(APIView):
+class HistoriqueDemendesConges(APIView):  # demande congés autorisation mission
     permission_classes = [AllowAny]
-    def get(self,request,**kwargs):
-        d1=kwargs['date1']
-        d2=kwargs['date2']
-        
-        listids=request.query_params.getlist('id')[0].split(',')
-        
-        listesemaines=[]
-        jsondata=[]
-        if( cache.get(d1) and cache.get(d2) and cache.get(jsondata) and cache.get(listesemaines)):
-           
-           d11=cache.get(d1)
-           d22=cache.get(d2) 
-           jd=cache.get(jsondata)
-           ls=cache.get(listesemaines)
-           return ls
-        else:  
-           ttzero=datetime.strptime("00:00:00","%H:%M:%S").time()
-           j=0
-           minuts=0.0
-           presencesupl=0.0
-           time_zero = datetime.strptime('00:00:00', '%H:%M:%S').time()
-           presencenor=0.0
-           comp=0
-           retard=0.0
-           avantSortie=0.0
-           deficit=0.0
-           jourtravaille=0
-           m=''
-           p=''
-           sup=''                   
 
-           r=''
-           avant_s=''
-           amplitude=0.0
-           se=[]
-           liste=[]
-           numberdebut=datetime.strptime(d1,"%Y-%m-%d").date().isocalendar()[1]#retourner la date début de semaine 
-           numberfin=datetime.strptime(d2,"%Y-%m-%d").date().isocalendar()[1]#routrner la date fin de semaine
-           listdates=[]
-           for y in listids:
-               l=''
-               listdates=[]
-               for ii in range(numberdebut,numberfin+1):#cette boucle a pour but de déterminer la date début et fin de chaque semaine puis à partir de rapportun jour on va calculer les heures de travail....
-                  if ii==numberdebut:
-                      first_date=datetime.strptime(d1,"%Y-%m-%d").date()
-                      debut=startEndDate(datetime.strptime(d1,"%Y-%m-%d").year,ii)[0]
-                  else:
-                      first_date=startEndDate(datetime.strptime(d1,"%Y-%m-%d").year,ii)[0]
-                      debut=startEndDate(datetime.strptime(d1,"%Y-%m-%d").year,ii)[0]
-                  if ii==numberfin:
-                      end_date=datetime.strptime(d2,"%Y-%m-%d").date()
-                      end=startEndDate(datetime.strptime(d1,"%Y-%m-%d").year,ii)[1] 
-                  else:
-                      end_date=startEndDate(datetime.strptime(d1,"%Y-%m-%d").year,ii)[1] 
-                      end=startEndDate(datetime.strptime(d1,"%Y-%m-%d").year,ii)[1]    
+    def get(self, request, pk):
+        cursor = connection.cursor()
 
-                  l=''
-                  u=''
-                  m=''
-                  d=''
+        # Correctly handle the parameters with placeholders
+        query = '''
+        SELECT 
+            n.user_name, c.validation, c.datedebut, c.datefin, m.motif, n.solde, 
+            c.heure_debut, c.heure_fin, c.date_autorisation, c.id, c.mission, 
+            c.validation, c.validationrh, c.destination, n.last_name 
+        FROM 
+            syspointage_newuser AS n
+        INNER JOIN  
+            syspointage_conges AS c ON c.employes_id = n.id
+        LEFT JOIN  
+            syspointage_motif_abs AS m ON c.motif_abs_id = m.id
+        WHERE 
+            c.validationrh = 1 
+            AND c.validationrh2 = 2 
+            AND n.id = %s 
+            AND c.teletravail = %s
+        ORDER BY 
+            c.datedebut
+        '''
 
-                  r=''
-                  avant_s=''
-                  jourtravaille=0
-                  amplitude=0.0
-                  jsondata=[]#pour vider la liste a chaque employé   
-                  for single_date in daterange(first_date, end_date):
-                        a=Rapportunjour(int(y),str(single_date))
-                        
-                        print(a)
-                        if a:
-                           jsondata.append({"motif":a[0]["motif"],"Entree": a[0]["Entree"], "Sortie": a[0]["Sortie"], "earlyEntree":a[0]["earlyEntree"], "lateEntree":a[0]["lateEntree"], "earlySortie":a[0]["earlySortie"], "lateSortie":a[0]["lateSortie"], "user_name": a[0]["user_name"], "matricule":a[0]["matricule"], "date_pointage": a[0]["date_pointage"], "planing":a[0]["planing"],'heuretravail': a[0]["heuretravail"], 'pause': a[0]["pause"],'presencenormal':a[0]['presencenormal'],"jourtravaille":a[0]['jourtravaille'],"entreepointage":a[0]['entreepointage'],"sortiepointage":a[0]['sortiepointage'],"heureauthorisation":a[0]['heureauthorisation'],"deficit":a[0]["deficit"],"iduser":a[0]["iduser"],"pointages":a[0]["pointages"],"tempabsence":a[0]["tempabsence"],"jourconge":a[0]["jourconge"],"tempsMission":a[0]["tempsMission"],"last_name":a[0]["last_name"]})  
-                           l=a[0]["last_name"]
-               
-                  if jsondata:
-                     for i in range (len(jsondata)): #on fait la somme
-                        minuts=minuts+float(jsondata[i]['heuretravail'])
-                        retard=retard+float(jsondata[i]['lateEntree'])
-                        avantSortie=avantSortie+float(jsondata[i]['earlySortie'])
-                        presencenor=presencenor+float(jsondata[i]['presencenormal'])
-                        jourtravaille+=float(jsondata[i]['jourtravaille'])
-                     r=str(minutes_hours(retard))
-                     m=str(minutes_hours(minuts))
-                     p=str(minutes_hours(presencenor))
-                     avant_s=str(minutes_hours(avantSortie))
-                     if jourtravaille!=0:
-                        amplitude=minuts/jourtravaille
-                     
-                     
-                     print(minuts,jourtravaille)
-                     if minuts>presencenor: 
-                        presencesupl=minuts-presencenor
-                     if minuts<presencenor:
-                        deficit=presencenor-minuts
-                     d=str(minutes_hours(deficit))
-                     sup=str(minutes_hours(presencesupl))  
-                     listesemaines.append({"amplitude":amplitude,"as":str(avantSortie),"ret":str(retard),"tra":str(minuts),"prno":str(presencenor),"psup":str(presencesupl),"dd":str(deficit),"avantSortie":avant_s,"user_name":str(NewUser.objects.filter(id=int(y)).values()[0].get('user_name')),"matricule":str(NewUser.objects.filter(id=int(y)).values()[0].get('matricule')),"presencereele":m,'presencenormal':p,'suplementaire':sup,'semaine':ii,"last_name":l,"deficit":d,"retard":r,"semaine":str(ii),"first_date":str(debut),"end_date":str(end)})                           
-                     listdates.append({"semaine":str(ii),"first_date":str(debut),"end_date":str(end)})
-                  jsondata=[]
-                  minuts=0.0
-                  presencenor=0.0
-                  presencesupl=0.0
-                  deficit=0.0
-                  avantSortie=0.0
-                  m=''
-                  p=''
-                  sup=''
-                  d=''
+        # Use parameterized values for `idemploye` and `teletravail` ('0' for teletravail)
+        cursor.execute(query, [pk, "0"])
 
-                  r=''
-                  retard=0.0
-                  avant_s=''
-               minutstotale=0.0
-               retardtotale=0.0
-               avantSortietotale=0.0
-               presencenortotale=0.0
-               suptotale=0.0
-               deficittotale=0.0
-               #cette boucle fait la somme de tous les semaines
-               for i in range (len(listesemaines)):
-                  minutstotale=minutstotale+float(listesemaines[i]['tra'])
-                  retardtotale=retardtotale+float(listesemaines[i]['ret'])
-                  avantSortietotale=avantSortietotale+float(listesemaines[i]['as'])
-                  presencenortotale=presencenortotale+float(listesemaines[i]['prno'])
-                  suptotale=suptotale+float(listesemaines[i]['psup'])
-                  deficittotale=deficittotale+float(listesemaines[i]['dd'])
-               rt=str(minutes_hours(retardtotale))
-               mt=str(minutes_hours(minutstotale))
-               pt=str(minutes_hours(presencenortotale))
-               avant_st=str(minutes_hours(avantSortietotale))
-               dt=str(minutes_hours(deficittotale))
-               st=str(minutes_hours(suptotale))
-               liste.append({"listedates":listdates,"listesemaine":listesemaines,"iduser":y,"reeltotale":str(mt),"retardTotale":str(rt),"presencetotale":str(pt),"avant_st":str(avant_st),"deficittotale":str(dt),"user_name":str(NewUser.objects.filter(id=int(y)).values()[0].get('user_name')),"last_name":l,"supptotale":str(st)})
+        # Fetch all the results
+        data = cursor.fetchall()
 
-               
-               listesemaines=[]
-           #liste.append({})
-           cache.set(
-             listesemaines,jsondata
-           ) 
-           return JsonResponse(liste, safe=False)  
-class RapportJournalier(APIView):
-    #permission_classes = [AllowAny]
-    def get(self, request,**kwargs):
+        # Prepare the response in JSON format
+        json_data = [
+            {
+                "user_name": obj[0],
+                "validation": obj[1],
+                "datedebut": obj[2],
+                "datefin": obj[3],
+                "motif": obj[4],
+                "solde": obj[5],
+                "heure_debut": obj[6],
+                "heure_fin": obj[7],
+                "date_autorisation": obj[8],
+                "idconge": obj[9],
+                "mission": obj[10],
+                "validation": obj[11],
+                "validationrh": obj[12],
+                "destination": obj[13],
+                "last_name": obj[14]
+            }
+            for obj in data
+        ]
 
-        listids=request.query_params.getlist('id')[0].split(',')
-        jsondata=[]
+        # Return the JSON response
+        return JsonResponse(json_data, safe=False)
+      
+class SelectcongebyId(APIView):  # demande congés autorisation mission
+    permission_classes = [AllowAny]
+
+    def get(self, request, pk):
+        cursor = connection.cursor()
+
+        # Use a parameterized query to prevent SQL injection
+        query = '''
+        SELECT 
+            n.user_name, c.validation, c.datedebut, c.datefin, m.motif, n.solde, 
+            c.heure_debut, c.heure_fin, c.date_autorisation, c.id, c.mission, 
+            n.last_name, n.matricule, c.commentaire, c.destination, 
+            c.validation, c.validationrh, c.nbjours, c.personneinterimaire_id, 
+            c.adresse, c.contact
+        FROM 
+            syspointage_newuser AS n
+        INNER JOIN 
+            syspointage_conges AS c ON c.employes_id = n.id
+        LEFT JOIN 
+            syspointage_motif_abs AS m ON c.motif_abs_id = m.id
+        WHERE 
+            c.id = %s
+        '''
+
+        # Execute the query with the parameterized 'idconge'
+        cursor.execute(query, [pk])
+        data = cursor.fetchall()
+
+        json_data = []
+        for obj in data:
+            # If 'personneinterimaire_id' exists, fetch the related user's name
+            personne_interimaire_name = ''
+            if obj[18]:
+                personne_interimaire_name = NewUser.objects.filter(id=int(obj[18])).values_list('user_name', flat=True).first() or ''
+            
+            # Append data to the JSON response
+            json_data.append({
+                "user_name": obj[0],
+                "validation": obj[1],
+                "datedebut": obj[2],
+                "datefin": obj[3],
+                "motif": obj[4],
+                "solde": obj[5],
+                "heure_debut": obj[6],
+                "heure_fin": obj[7],
+                "date_autorisation": obj[8],
+                "idconge": obj[9],
+                "mission": obj[10],
+                "last_name": obj[11],
+                "matricule": obj[12],
+                "commentaire": obj[13],
+                "destination": obj[14],
+                "validation": obj[15],
+                "validationrh": obj[16],
+                "nbjours": obj[17],
+                "personneinterimaire": personne_interimaire_name,
+                "adresse": obj[19],
+                "contact": obj[20]
+            })
+
+        return JsonResponse(json_data, safe=False)
+class RapportSemaine(APIView):
+    def post(self, request, **kwargs):
+        listids = request.data.get('ids')
+
+        if not listids or not isinstance(listids, list):
+            return Response({"error": "Aucun ID d'employé fourni ou format invalide"}, status=status.HTTP_400_BAD_REQUEST)
+
+        listids = [item for sublist in listids for item in (sublist if isinstance(sublist, list) else [sublist])]
+
         d1 = kwargs['date1']
         d2 = kwargs['date2']
-        if  cache.get(d1) and cache.get(d2) and cache.get(jsondata) and cache.get(a):
-           
-           d11=cache.get(d1)  
-           d22=cache.get(d2)
-           jsonn=cache.get(jsondata)
-           aa=cache.get(a)
-           return jsonn
-        else:
+        start_date = datetime.strptime(d1, "%Y-%m-%d").date()
+        end_date = datetime.strptime(d2, "%Y-%m-%d").date()
 
-            
-            for i in listids:
-                for single_date in daterange(datetime.strptime(d1,"%Y-%m-%d").date(), datetime.strptime(d2,"%Y-%m-%d").date()):
-                    
-                    a=Rapportunjour(int(i),str(single_date))
-                     
-                   
-                    
+        if cache.get(d1) and cache.get(d2) and cache.get('jsondata'):
+            return JsonResponse(cache.get('jsondata'), safe=False)
+
+        all_data = []
+
+        for user_id in listids:
+            if not isinstance(user_id, int):
+                continue
+
+            listesemaines = []
+            listdates = []
+
+            current_monday = start_date - timedelta(days=start_date.weekday())
+
+            while current_monday <= end_date:
+                semaine_start = current_monday
+                semaine_end = current_monday + timedelta(days=6)
+
+                debut = max(semaine_start, start_date)
+                end = min(semaine_end, end_date)
+
+                semaine_num = debut.isocalendar()[1]
+
+                jsondata = []
+                l = ''
+                total_minutes = total_retard = total_avant_sortie = total_presencenor = 0.0
+                jourtravaille = 0.0
+
+                for single_date in daterange(debut, end):
+                    a = Rapportunjour(int(user_id), str(single_date))
                     if a:
-                       
-                       jsondata.append({"motif":a[0]["motif"],"Entree": a[0]["Entree"], "Sortie": a[0]["Sortie"], "earlyEntree":minutes_hours(float(a[0]["earlyEntree"])), "lateEntree": minutes_hours(float(a[0]["lateEntree"])), "earlySortie":minutes_hours(float(a[0]["earlySortie"])), "lateSortie":minutes_hours(float(a[0]["lateSortie"])), "user_name": a[0]["user_name"], "matricule":a[0]["matricule"], "date_pointage": a[0]["date_pointage"], "planing":a[0]["planing"],'heuretravail': minutes_hours(float(a[0]["heuretravail"])), 'pause': a[0]["pause"],'presencenormal': minutes_hours(float(a[0]['presencenormal'])),"jourtravaille":a[0]['jourtravaille'],"entreepointage":a[0]['entreepointage'],"sortiepointage":a[0]['sortiepointage'],"heureauthorisation": minutes_hours(float(a[0]['heureauthorisation'])),"deficit": minutes_hours(float(a[0]["deficit"])),"iduser":a[0]["iduser"],"pointages":a[0]["pointages"],"tempabsence": minutes_hours(float(a[0]["tempabsence"])),"jourconge":a[0]["jourconge"],"tempsMission": minutes_hours(float(a[0]["tempsMission"])),"tempsconge": minutes_hours(float(a[0]['tempsconge'])),"last_name":a[0]['last_name'],"heuretravailbrute":minutes_hours(float(a[0]['heuretravailbrute'])),"retardmidi":minutes_hours(float(a[0]['retardmidi']))})  
-                            
-            return JsonResponse(jsondata, safe=False)
-        return Response("pas de pointages ", status=status.HTTP_400_BAD_REQUEST)
+                        data = a[0]
+                        jsondata.append({
+                            "motif": data["motif"], "Entree": data["Entree"], "Sortie": data["Sortie"],
+                            "earlyEntree": data["earlyEntree"], "lateEntree": data["lateEntree"],
+                            "earlySortie": data["earlySortie"], "lateSortie": data["lateSortie"],
+                            "user_name": data["user_name"], "matricule": data["matricule"],
+                            "date_pointage": data["date_pointage"], "planing": data["planing"],
+                            "heuretravail": data["heuretravail"], "pause": data["pause"],
+                            "presencenormal": data["presencenormal"], "jourtravaille": data["jourtravaille"],
+                            "entreepointage": data["entreepointage"], "sortiepointage": data["sortiepointage"],
+                            "heureauthorisation": data["heureauthorisation"], "deficit": data["deficit"],
+                            "iduser": data["iduser"], "pointages": data["pointages"],
+                            "tempabsence": data["tempabsence"], "jourconge": data["jourconge"],
+                            "tempsMission": data["tempsMission"], "last_name": data["last_name"],"presenceplann": data["presenceplann"]
+                        })
+                        total_minutes += float(data['heuretravail'])
+                        total_retard += float(data['lateEntree'])
+                        total_avant_sortie += float(data['earlySortie'])
+                        total_presencenor += float(data['presenceplann'])
+                        jourtravaille += float(data['jourtravaille'])
+                        l = data["last_name"]
+
+                if jsondata:
+                    presencesupl = max(0, total_minutes - total_presencenor)
+                    deficit = max(0, total_presencenor - total_minutes)
+                    amplitude = total_minutes / jourtravaille if jourtravaille else 0.0
+
+                    listesemaines.append({
+                        "amplitude": amplitude,
+                        "as": str(total_avant_sortie),
+                        "ret": str(total_retard),
+                        "tra": str(total_minutes),
+                        "prno": str(total_presencenor),
+                        "psup": str(presencesupl),
+                        "dd": str(deficit),
+                        "avantSortie": minutes_hours(total_avant_sortie),
+                        "user_name": str(NewUser.objects.filter(id=int(user_id)).values()[0].get('user_name')),
+                        "matricule": str(NewUser.objects.filter(id=int(user_id)).values()[0].get('matricule')),
+                        "presencereele": minutes_hours(total_minutes),
+                        'presencenormal': minutes_hours(total_presencenor),
+                        'suplementaire': minutes_hours(presencesupl),
+                        'semaine': str(semaine_num),
+                        "last_name": l,
+                        "deficit": minutes_hours(deficit),
+                        "retard": minutes_hours(total_retard),
+                        "first_date": str(debut),
+                        "end_date": str(end)
+                    })
+                    listdates.append({
+                        "semaine": str(semaine_num),
+                        "first_date": str(debut),
+                        "end_date": str(end)
+                    })
+
+                current_monday += timedelta(days=7)
+
+            # Totaux
+            total_all_minutes = sum(float(w['tra']) for w in listesemaines)
+            total_all_retard = sum(float(w['ret']) for w in listesemaines)
+            total_all_avant_sortie = sum(float(w['as']) for w in listesemaines)
+            total_all_presencenor = sum(float(w['prno']) for w in listesemaines)
+            total_all_supp = sum(float(w['psup']) for w in listesemaines)
+            total_all_deficit = sum(float(w['dd']) for w in listesemaines)
+
+            all_data.append({
+                "listedates": listdates,
+                "listesemaine": listesemaines,
+                "iduser": user_id,
+                "reeltotale": minutes_hours(total_all_minutes),
+                "retardTotale": minutes_hours(total_all_retard),
+                "presencetotale": minutes_hours(total_all_presencenor),
+                "avant_st": minutes_hours(total_all_avant_sortie),
+                "deficittotale": minutes_hours(total_all_deficit),
+                "supptotale": minutes_hours(total_all_supp),
+                "user_name": str(NewUser.objects.filter(id=int(user_id)).values()[0].get('user_name')),
+                "last_name": l
+            })
+
+        cache.set(f"{d1}_{d2}_jsondata", all_data)
+        return JsonResponse(all_data, safe=False)
+class RapportJournalier(APIView):
+    # permission_classes = [AllowAny]
+
+    def post(self, request, **kwargs):
+        listids = request.data.get('ids')  # Récupérer directement la liste
+
+        if not listids or not isinstance(listids, list):  # Vérifier si c'est bien une liste
+            return Response({"error": "Aucun ID d'employé fourni ou format invalide"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Aplatir la liste si elle contient des sous-listes
+        listids = [item for sublist in listids for item in (sublist if isinstance(sublist, list) else [sublist])]
+
+        print("listids:", listids)  # Debugging
+
+        jsondata = []
+        d1 = kwargs['date1']
+        d2 = kwargs['date2']
+
+        # Vérification du cache
+        if cache.get(d1) and cache.get(d2) and cache.get('jsondata'):
+            return JsonResponse(cache.get('jsondata'), safe=False)
+
+        # Traitement des pointages
+        for i in listids:
+            if not isinstance(i, int):  # Vérifier si l'élément est un entier
+                print("⚠️ ERREUR: i n'est pas un entier !", i)  # Debug
+                continue  # Ignorer cet élément s'il n'est pas valide
+
+            for single_date in daterange(datetime.strptime(d1, "%Y-%m-%d").date(), datetime.strptime(d2, "%Y-%m-%d").date()):
+                a = Rapportunjour(int(i), str(single_date))  # Correction ici
+
+                if a:
+                    jsondata.append({
+                        "matricule": a[0].get("matricule", ""),
+                        "user_name": a[0].get("user_name", ""),
+                        "last_name": a[0].get("last_name", ""),
+                        "iduser": a[0].get("iduser", ""),
+                        "date_pointage": a[0].get("date_pointage", ""),
+                        "nomhoraire": a[0].get("nomhoraire", "pas de planning"),
+                        "debuthoraire": a[0].get("debuthoraire", "00:00:00"),
+                        "finhoraire": a[0].get("finhoraire", "00:00:00"),
+                        "Entree": a[0].get("Entree", "00:00:00"),
+                        "Sortie": a[0].get("Sortie", "00:00:00"),
+                        "refpointeuse": a[0].get("refpointeuse", ""),
+                        "efpointeuse": a[0].get("efpointeuse", ""),
+                        "jour_nrmlmn_travaille": minutes_hours(float(a[0].get("jour_nrmlmn_travaille", 0))),
+                        "jour_travaille": minutes_hours(float(a[0].get("jour_travaille", 0))),
+                        "retard": minutes_hours(float(a[0].get("retard", 0))),
+                        "depart_anticipe": a[0].get("depart_anticipe", "0.0"),
+                        "Absent": a[0].get("Absent", 1),
+                        "heuresup": minutes_hours(float(a[0].get("heuresup", 0))),
+                        "heuresupvalide": minutes_hours(float(a[0].get("heuresupvalide", 0))),
+                        "presenceplann": minutes_hours(float(a[0].get("presenceplann", 0))),
+                        "motif": a[0].get("motif", "pas de pointage"),
+                        "departement_name": a[0].get("departement_name", ""),
+                        "presencenormal": minutes_hours(float(a[0].get("presencenormal", 0))),
+                        "ligne_de_production": a[0].get("ligne_de_production", ""),
+                        "superviseur": a[0].get("superviseur", ""),
+                    })
+
+        # Mise en cache des résultats
+        cache.set('jsondata', jsondata, timeout=60 * 15)
+
+        return JsonResponse(jsondata, safe=False)
+
+
 
 class DepartmentHierarchyView(APIView):
     permission_classes = [AllowAny]
@@ -1016,47 +1675,103 @@ class departementbyid(APIView):
 
         return JsonResponse(hierarchy) 
 class  RapportPointage(APIView):
-      permission_classes = [AllowAny]
-      def get(self, request,**kwargs):
-          listids=request.query_params.getlist('id')[0].split(',')
-          liste=[]
-          d1=kwargs['date1']
-          d2=kwargs['date2']  
-          json_data=[]  
-          if  cache.get(d1) and cache.get(d2) and cache.get(liste) and cache.get(jsondata):
-              
-              d11=cache.get(d1)
-              d22=cache.get(d2)
-              listt=cache.get(liste)
-              jsonn=cache.get(jsondata)
-              return listt
-          else:
-             
-              for i in listids: 
-                  cursor = connection.cursor()
+      def post(self, request, **kwargs):
+        listids = request.data.get('ids')  # Récupérer directement la liste
 
-                  cursor.execute('SELECT  u.user_name , u.matricule , p.date_pointage , poin.nom_pointeuse,p.date_pointage,u.last_name FROM (syspointage_pointage as p INNER JOIN syspointage_newuser as u ON p.employes_id = u.id) left join syspointage_pointeuse as poin on p.pointeuse_id=poin.id  where u.id=%s   ORDER by p.date_pointage'%int(i))
-                  r = cursor.fetchall()
-              
-            
-                  for obj in r:
-                      json_data.append({"user_name":obj[0],"matricule":obj[1],"date_pointage":obj[2].date(),"nom_pointeuse":obj[3],"heure":obj[4].time(),"last_name":obj[5]})   
-              for obj in json_data:
-                  
-                  if d1<=str(obj["date_pointage"])<=d2:
-                     liste.append({"user_name":obj["user_name"],"matricule":obj["matricule"],"date_pointage":obj["date_pointage"],"nom_pointeuse":obj["nom_pointeuse"],"heure":obj["heure"],"last_name":obj["last_name"]})
-              
-              cache.set(
-                 liste,json_data
-              )
-              
-    
-              return JsonResponse(liste, safe=False) 
+        if not listids or not isinstance(listids, list):  # Vérifier si c'est bien une liste
+            return Response({"error": "Aucun ID d'employé fourni ou format invalide"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Aplatir la liste si elle contient des sous-listes
+        listids = [item for sublist in listids for item in (sublist if isinstance(sublist, list) else [sublist])]
+
+        print("listids:", listids)  # Debugging
+
+        jsondata = []
+        d1 = kwargs['date1']
+        d2 = kwargs['date2']
+
+        # Vérification du cache
+        if cache.get(d1) and cache.get(d2) and cache.get('jsondata'):
+            return JsonResponse(cache.get('jsondata'), safe=False)
+
+        # Traitement des pointages
+        for i in listids:
+            if not isinstance(i, int):  # Vérifier si l'élément est un entier
+                print("⚠️ ERREUR: i n'est pas un entier !", i)  # Debug
+                continue  # Ignorer cet élément s'il n'est pas valide
+
+            for single_date in daterange(datetime.strptime(d1, "%Y-%m-%d").date(), datetime.strptime(d2, "%Y-%m-%d").date()):
+                a = Rapportunjour(int(i), str(single_date))  # Correction ici
+                # Récupération des références des pointeuses entrée et sortie
+                ref_entree = a[0].get("refpointeuse", "") if a[0].get("refpointeuse", "") else None
+                ref_sortie = a[0].get("efpointeuse", "") if a[0].get("efpointeuse", "") else None
+                print('ref_entree',ref_entree)
+                print('ref_sortie',ref_sortie)
+
+                nom_pointeuse_entree = ""
+                nom_pointeuse_sortie = ""
+
+                if ref_entree and str(ref_entree).isdigit():
+                    cursor = connection.cursor()
+                    query = 'SELECT nom_pointeuse FROM syspointage_pointeuse WHERE "id" = %s'
+                    cursor.execute(query, (int(ref_entree),))
+                    res = cursor.fetchone()
+                    nom_pointeuse_entree = res[0] if res else ""
+
+                if ref_sortie and str(ref_sortie).isdigit():
+                    cursor = connection.cursor()
+                    query = 'SELECT nom_pointeuse FROM syspointage_pointeuse WHERE "id" = %s'
+                    cursor.execute(query, (ref_sortie,))
+                    res = cursor.fetchone()
+                    nom_pointeuse_sortie = res[0] if res else ""
+
+                if a:
+                    jsondata.append({
+                        "matricule": a[0].get("matricule", ""),
+                        "user_name": a[0].get("user_name", ""),
+                        "last_name": a[0].get("last_name", ""),
+                        "iduser": a[0].get("iduser", ""),
+                        "date_pointage": a[0].get("date_pointage", ""),
+                        "nomhoraire": a[0].get("nomhoraire", "pas de planning"),
+                        "debuthoraire": a[0].get("debuthoraire", "00:00:00"),
+                        "finhoraire": a[0].get("finhoraire", "00:00:00"),
+                        "Entree": a[0].get("Entree", "00:00:00"),
+                        "Sortie": a[0].get("Sortie", "00:00:00"),
+                        "refpointeuse": a[0].get("refpointeuse", ""),
+                        "efpointeuse": a[0].get("efpointeuse", ""),
+                        "jour_nrmlmn_travaille": minutes_hours(float(a[0].get("jour_nrmlmn_travaille", 0))),
+                        "jour_travaille": minutes_hours(float(a[0].get("jour_travaille", 0))),
+                        "retard": minutes_hours(float(a[0].get("retard", 0))),
+                        "depart_anticipe": a[0].get("depart_anticipe", "0.0"),
+                        "Absent": a[0].get("Absent", 1),
+                        "heuresup": minutes_hours(float(a[0].get("heuresup", 0))),
+                        "heuresupvalide": minutes_hours(float(a[0].get("heuresupvalide", 0))),
+                        "presenceplann": convert_minutes_to_hhmm(float(a[0].get("presenceplann", 0))),
+                        "motif": a[0].get("motif", "pas de pointage"),
+                        "departement_name": a[0].get("departement_name", ""), 
+                        "presencenormal": minutes_hours(float(a[0].get("presencenormal", 0))),
+                        "nom_pointeuse_entree": nom_pointeuse_entree,
+                        "nom_pointeuse_sortie": nom_pointeuse_sortie,
+                        "pointeuses_entree": a[0].get("pointeuses_entree", ""),
+                        "pointeuses_sortie": a[0].get("pointeuses_sortie", ""),
+                    })
+
+        # Mise en cache des résultats
+        cache.set('jsondata', jsondata, timeout=60 * 15)
+
+        return JsonResponse(jsondata, safe=False)
+
 class  RapportAbsences(APIView):
-      permission_classes = [AllowAny]
-      def get(self, request,**kwargs):
+      def post(self, request, **kwargs):
           listAbsences=[]
-          listids=request.query_params.getlist('id')[0].split(',')
+          listids = request.data.get('ids')
+          if not listids or not isinstance(listids, list):  # Vérifier si c'est bien une liste
+            return Response({"error": "Aucun ID d'employé fourni ou format invalide"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Aplatir la liste si elle contient des sous-listes
+          listids = [item for sublist in listids for item in (sublist if isinstance(sublist, list) else [sublist])]
+
+          print("listids:", listids)  # Debugging
           datesabsences=[]
           d1=kwargs['date1']
           d2=kwargs['date2']    
@@ -1068,6 +1783,16 @@ class  RapportAbsences(APIView):
           listauth=[]
  
           jsondata=[]
+          json_data = []
+          # Récupérer directement la liste
+
+        
+
+         
+        
+
+        # Vérification du cache
+        
           if  cache.get(d1) and cache.get(d2) and cache.get(listAbsences):
              d11=cache.get(d1)
              d22=cache.get(d22)
@@ -1104,92 +1829,194 @@ class  RapportAbsences(APIView):
 
 
          
-          return JsonResponse(listAbsences, safe=False)   
-class  RapportSynthese(APIView):
-      permission_classes = [AllowAny]
-      def get(self, request,**kwargs):
-          listsynthese=[]
-          listids=request.query_params.getlist('id')[0].split(',')
-          jsondata=[]
+          return JsonResponse(listAbsences, safe=False) 
+class  RapportAnomalie(APIView):
+      def post(self, request, **kwargs):
+          listAbsences=[]
+          listids = request.data.get('ids')
+          if not listids or not isinstance(listids, list):  # Vérifier si c'est bien une liste
+            return Response({"error": "Aucun ID d'employé fourni ou format invalide"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Aplatir la liste si elle contient des sous-listes
+          listids = [item for sublist in listids for item in (sublist if isinstance(sublist, list) else [sublist])]
+
+          print("listids:", listids)  # Debugging
+          datesabsences=[]
           d1=kwargs['date1']
-          d2=kwargs['date2'] 
-          liste=[]  
-          
-          if cache.get(d1) and cache.get(d2) and cache.get(listsynthese) and cache.get(jsondata):
+          d2=kwargs['date2']    
+          json_data=[]
+          listc=[]
+          listbb=[]
+          liste=[]#liste entre 2 dates 
+          datecongesconfirme=[]  
+          listauth=[]
+ 
+          jsondata=[]
+          json_data = []
+          # Récupérer directement la liste
+
+        
+
+         
+        
+
+        # Vérification du cache
+        
+          if  cache.get(d1) and cache.get(d2) and cache.get(listAbsences):
              d11=cache.get(d1)
              d22=cache.get(d22)
-             listsy=cache.get(listsynthese)
-             js=cache.get(jsondata)
-             return listsy
-          else:
-             
-             ttzero=datetime.strptime("00:00:00","%H:%M:%S").time()
-             joursabsence=0
-             tempsabsence=0.0
-             tab=''
+             listab=cache.get(listAbsences)
+             return listab
+          else: 
+             motifs=motif_abs.objects.values().all()
+
 
              for y in listids:
-            
-                 jourtravai=0
-                 minuts=0.0
-                 m=''
-                 minutestravaill=0.0
-                 earlysortie=0.0
-                 defici=0.0
-                 joursabsence=0
-                 jourconge=0
-                 heuremission=0.0
-                 heureauthorisation=0.0
-                 prnormale=0.0
-                 tempsabsence=0.0
-                 tab=''
-                 amplitude=0.0
-                 jourtravaille=0
+                 jsondata=[]#pour vider la liste et ajouter la liste de l'autre employé
                  for single_date in daterange(datetime.strptime(d1,"%Y-%m-%d").date(), datetime.strptime(d2,"%Y-%m-%d").date()):
+
                      a=Rapportunjour(int(y),str(single_date))
 
                      if a:
                         jsondata.append({"motif":a[0]["motif"],"Entree": a[0]["Entree"], "Sortie": a[0]["Sortie"], "earlyEntree":a[0]["earlyEntree"], "lateEntree":a[0]["lateEntree"], "earlySortie":a[0]["earlySortie"], "lateSortie":a[0]["lateSortie"], "user_name": a[0]["user_name"], "matricule":a[0]["matricule"], "date_pointage": a[0]["date_pointage"], "planing":a[0]["planing"],'heuretravail': a[0]["heuretravail"], 'pause': a[0]["pause"],'presencenormal':a[0]['presencenormal'],"jourtravaille":a[0]['jourtravaille'],"entreepointage":a[0]['entreepointage'],"sortiepointage":a[0]['sortiepointage'],"heureauthorisation":a[0]['heureauthorisation'],"deficit":a[0]["deficit"],"iduser":a[0]["iduser"],"pointages":a[0]["pointages"],"tempabsence":a[0]["tempabsence"],"jourconge":a[0]["jourconge"],"tempsMission":a[0]["tempsMission"],"last_name":a[0]['last_name']})  
-       
-                 if jsondata:
-                    for obj in jsondata:   
-                        
-                        tempsabsence=tempsabsence+float(obj['tempabsence'])
-                        
-                        tab=str(minutes_hours(tempsabsence))
-                  
-                        minuts=minuts+float(obj['lateEntree'])
-                        minutestravaill=minutestravaill+float(obj['heuretravail'])
-                        earlysortie=earlysortie+float(obj['earlySortie'])
-                        defici=defici+float(obj['deficit'])
-                        sortieavantheure=str(minutes_hours(earlysortie))
-                        m=str(minutes_hours(minuts))
-                        travail=str(minutes_hours(minutestravaill))
-                        deficit=str(minutes_hours(defici))
-                        prnormale=prnormale+float(obj['presencenormal'])
-                        pr=str(minutes_hours(prnormale))
-                        jourtravaille+=float(obj['jourtravaille'])
-                        if obj['motif']=="Absent" or obj['motif']=="Absence non justifié" or obj['motif']=="Absence justifié":
-                           if obj["deficit"]!="0.0":#nombre jour absence découlant le déficit
-                              joursabsence=joursabsence+1
-                        if obj['motif'] =="Congé":
-                           jourconge=jourconge+1
-                        if obj['motif']=="Mission":
-                           heuremission=heuremission+float(obj['tempsMission'])
-                           
-                        if obj['motif']=="Autorisation":
-                           heureauthorisation=heureauthorisation+float(obj['heureauthorisation'])
 
-                        tempsauthorisation=str(minutes_hours(heureauthorisation))
-          
-                        heuresmission=str(minutes_hours(heuremission))
+                 for obj in jsondata:
+                     if obj['motif']=="Absent": 
+                        ##compabs=compabs+1
+                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"absence","last_name":obj['last_name'],"pointages":a[0]["pointages"]})
+                     elif obj['motif']=="Pointage impair":
+                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"Pointage impair","last_name":obj['last_name'],"pointages":a[0]["pointages"]})
+                    
+         
+          return JsonResponse(listAbsences, safe=False)   
+class RapportSynthese(APIView):
+    def post(self, request, **kwargs):
+        listids = request.data.get('ids')  # Récupérer directement la liste
 
-                    if jourtravaille!=0:
-                        amplitude=minutestravaill/jourtravaille   
-                    listsynthese.append({"amplitude":amplitude,"tempsabsence":tab,"presencenormale":pr,"user_name":obj['user_name'],"matricule":obj['matricule'],"retard":m,"travail":travail,"earlySortie":sortieavantheure,"deficit":deficit,"joursabsence":joursabsence,"jourconges":jourconge,"heuremission":heuresmission,"heureauthorisation":tempsauthorisation,"last_name":obj['last_name']})
-                    jsondata=[]#pour vider la liste jsondata :en premier temps elle prend les objets user1,puis user 2....
+        if not listids or not isinstance(listids, list):
+            return Response({"error": "Aucun ID d'employé fourni ou format invalide"}, status=status.HTTP_400_BAD_REQUEST)
 
-          return JsonResponse(listsynthese, safe=False)                       
+        # Aplatir la liste si elle contient des sous-listes
+        listids = [item for sublist in listids for item in (sublist if isinstance(sublist, list) else [sublist])]
+
+        print("listids:", listids)
+        listsynthese = []
+
+        d1 = kwargs['date1']
+        d2 = kwargs['date2']
+
+        # Vérification du cache
+        if cache.get(d1) and cache.get(d2) and cache.get('jsondata'):
+            return JsonResponse(cache.get('jsondata'), safe=False)
+
+        for y in listids:
+            if not isinstance(y, int):
+                print("⚠️ ERREUR: i n'est pas un entier !", y)
+                continue
+
+            # Réinitialisation pour chaque employé
+            json_data = []
+            jourtravai = 0
+            minuts = 0.0
+            m = ''
+            minutestravaill = 0.0
+            earlysortie = 0.0
+            defici = 0.0
+            joursabsence = 0
+            jourconge = 0
+            heuremission = 0.0
+            heureauthorisation = 0.0
+            prnormale = 0.0
+            tempsabsence = 0.0
+            tab = ''
+            amplitude = 0.0
+            jourtravaille = 0
+
+            for single_date in daterange(datetime.strptime(d1, "%Y-%m-%d").date(), datetime.strptime(d2, "%Y-%m-%d").date()):
+                a = Rapportunjour(int(y), str(single_date))
+
+                if a:
+                    json_data.append({
+                        "motif": a[0]["motif"],
+                        "Entree": a[0]["Entree"],
+                        "Sortie": a[0]["Sortie"],
+                        "earlyEntree": a[0]["earlyEntree"],
+                        "lateEntree": a[0]["lateEntree"],
+                        "earlySortie": a[0]["earlySortie"],
+                        "lateSortie": a[0]["lateSortie"],
+                        "user_name": a[0]["user_name"],
+                        "matricule": a[0]["matricule"],
+                        "date_pointage": a[0]["date_pointage"],
+                        "planing": a[0]["planing"],
+                        'heuretravail': a[0]["heuretravail"],
+                        'pause': a[0]["pause"],
+                        'presencenormal': a[0]['presencenormal'],
+                        "jourtravaille": a[0]['jourtravaille'],
+                        "entreepointage": a[0]['entreepointage'],
+                        "sortiepointage": a[0]['sortiepointage'],
+                        "heureauthorisation": a[0]['heureauthorisation'],
+                        "deficit": a[0]["deficit"],
+                        "iduser": a[0]["iduser"],
+                        "pointages": a[0]["pointages"],
+                        "tempabsence": a[0]["tempabsence"],
+                        "jourconge": a[0]["jourconge"],
+                        "tempsMission": a[0]["tempsMission"],
+                        "last_name": a[0]['last_name'],
+                        "presenceplann": a[0]['presenceplann'],
+                    })
+
+            if json_data:
+                for obj in json_data:
+                    tempsabsence += float(obj['tempabsence'])
+                    tab = str(minutes_hours(tempsabsence))
+
+                    minuts += float(obj['lateEntree'])
+                    minutestravaill += float(obj['heuretravail'])
+                    earlysortie += float(obj['earlySortie'])
+                    defici += float(obj['deficit'])
+                    sortieavantheure = str(minutes_hours(earlysortie))
+                    m = str(minutes_hours(minuts))
+                    travail = str(minutes_hours(minutestravaill))
+                    deficit = str(minutes_hours(defici))
+                    prnormale += float(obj['presenceplann'])
+                    pr = str(minutes_hours(prnormale))
+                    jourtravaille += float(obj['jourtravaille'])
+
+                    if obj['motif'] in ["Absent", "Absence non justifié", "Absence justifié"]:
+                        if obj["deficit"] != "0.0":
+                            joursabsence += 1
+                    if obj['motif'] == "Congé":
+                        jourconge += 1
+                    if obj['motif'] == "Mission":
+                        heuremission += float(obj['tempsMission'])
+                    if obj['motif'] == "Autorisation":
+                        heureauthorisation += float(obj['heureauthorisation'])
+
+                tempsauthorisation = str(minutes_hours(heureauthorisation))
+                heuresmission = str(minutes_hours(heuremission))
+
+                if jourtravaille != 0:
+                    amplitude = minutestravaill / jourtravaille
+
+                listsynthese.append({
+                    "amplitude": amplitude,
+                    "tempsabsence": tab,
+                    "presencenormale": pr,
+                    "user_name": obj['user_name'],
+                    "matricule": obj['matricule'],
+                    "retard": m,
+                    "travail": travail,
+                    "earlySortie": sortieavantheure,
+                    "deficit": deficit,
+                    "joursabsence": joursabsence,
+                    "jourconges": jourconge,
+                    "heuremission": heuresmission,
+                    "heureauthorisation": tempsauthorisation,
+                    "last_name": obj['last_name']
+                })
+
+        return JsonResponse(listsynthese, safe=False)
+                    
 class RapportMensuelle(APIView):
     permission_classes = [AllowAny]
     def get(self, request,**kwargs):
@@ -1264,7 +2091,7 @@ class RapportAnuellement(APIView):
               #rap=rapportmensulle([id],ss,(datetime.strptime(str(ss),"%Y-%m-%d")+relativedelta(years=1)).date())#chaque employé  en an
               for single_date in daterange(ss, (datetime.strptime(str(ss),"%Y-%m-%d")+relativedelta(years=1)).date()):
                
-                  a=Rapportunjour(int(id),str(single_date))            
+                  a=Rapportunjoure(int(id),str(single_date))            
                   if a:
                   
                      presencereeleminutes=presencereeleminutes+float(a[0]["heuretravail"])
@@ -1290,27 +2117,27 @@ class SendMai(APIView):
  
     # This function sends emails for (validation, refus, annulation)
     def put(self, request, *args, **kwargs):
-        emaill = request.data.get('email')
-        objet = request.data.get('objet')
-        message = request.data.get('message')
+        # emaill = request.data.get('email')
+        # objet = request.data.get('objet')
+        # message = request.data.get('message')
 
-        if emaill and objet and message:
-            try:
-                send_mail(
-                    str(objet),
-                    str(message),
-                    settings.EMAIL_HOST_USER,
-                    [emaill],  # Assuming 'emaill' is a string containing a single email address
-                    fail_silently=False,
-                    html_message="<p style='line-height: 300%;'>" + str(message) + "<br>IPS Time</p>"
-                )
-                return Response({"status": "true"}, status=status.HTTP_200_OK)
-            except Exception as e:
-                return Response({"status": "Couldn't send the email: " + str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        else:
-            return Response({"status": "Missing email, objet, or message in the request"}, status=status.HTTP_400_BAD_REQUEST)
+        # if emaill or objet or message:
+        #     try:
+        #         send_mail(
+        #             str(objet),
+        #             str(message),
+        #             settings.EMAIL_HOST_USER,
+        #             [emaill],  # Assuming 'emaill' is a string containing a single email address
+        #             fail_silently=False,
+        #             html_message="<p style='line-height: 300%;'>" + str(message) + "<br>IPS Time</p>"
+        #         )
+        #         return Response({"status": "true"}, status=status.HTTP_200_OK)
+        #     except Exception as e:
+        return Response({"status": "Couldn't send the email: " }, status=status.HTTP_400_BAD_REQUEST)
+        # else:
+        #     return Response({"status": "Missing email, objet, or message in the request"}, status=status.HTTP_400_BAD_REQUEST)
       
-class Mouchardcreate(APIView):
+class Mouchardcreate(APIView): 
     permission_classes = [AllowAny]
     def post(self, request,**kwargs):
         dataa={}
@@ -1535,7 +2362,7 @@ class ChartAbsenceList(APIView):
                  listids.append(objj[0])
        
         for u in listids:  
-            a=Rapportunjour(int(u),str(datenow))
+            a=Rapportunjoure(int(u),str(datenow))
             if a:
                jsondata.append({"motif":a[0]["motif"], "lateEntree":a[0]["lateEntree"]})    
         for objj in jsondata:
@@ -1638,7 +2465,7 @@ class LesretardsParSemaine(APIView):
         anticipe=0.0
         for idemploye in listids:
 
-            a=Rapportunjour(int(idemploye),date)
+            a=Rapportunjoure(int(idemploye),date)
             day=findDay(date)
             if a:
                
@@ -1777,10 +2604,9 @@ class updatedeletepause(generics.RetrieveUpdateDestroyAPIView):
     serializer_class=PauseSerializer 
     permission_classes = [AllowAny]  
 class PointagesEmploye(generics.ListAPIView):
+    queryset=pointage.objects.all()
     permission_classes = [AllowAny]
     serializer_class = PointageSerializer  
-    def get_queryset(self):    
-      return pointage.objects.filter(employes=self.kwargs['id']).all()
 class DepartmentHierarchyView(APIView):
     def get(self, request):
         departments = arborescence.objects.all()

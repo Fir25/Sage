@@ -15,7 +15,7 @@ services:
     command: >
       sh -c "python3 manage.py makemigrations syspointage &&
       python3 manage.py migrate syspointage &&
-      gunicorn --workers=17 --timeout=1200 --bind 0.0.0.0:${BACKEND_PORT} pointage.wsgi"   
+      gunicorn --workers=17 --timeout=1200  --limit-request-line 32768   --bind 0.0.0.0:${BACKEND_PORT} pointage.wsgi" 
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
     container_name: django
@@ -27,8 +27,8 @@ services:
     build:
       context: ./reactcontainer
     environment:
-      - REACT_APP_URL=http://192.168.23.10/api/
-      - REACT_APP_URL2=http://192.168.23.10/
+      - REACT_APP_URL=http://192.168.1.113/api/
+      - REACT_APP_URL2=http://192.168.1.113/
     volumes:
       - react_build:/reactcontainer/build
 
@@ -48,22 +48,12 @@ services:
       - frontend
     env_file:
       - ./.env   
-    #command: /etc/nginx/entrypoint.sh ${FRONTEND_PORT} ${SERVER_NAME} ${API_URL}
+    command: /bin/bash -c "chmod -R 755 /var/www/react && nginx -g 'daemon off;'"
+
     restart: always
 
-  mysql:
-    image: mysql:latest
-    container_name: mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: 'IP-soft@2024'
-      MYSQL_ROOT_HOST: '%'
-    ports:
-      - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
-    volumes:
-      - mysql-data:/var/lib/mysql
-    restart: always
+ 
 
 volumes:
-  mysql-data:
+  
   react_build:
