@@ -37,7 +37,7 @@ const [pointeuse, setPointeuse] = useState('');
     setAlertautorisation(false);
 
     if (!date_autorisation || !heure_debut || options.length === 0) {
-      setAlertError(true);
+      setAlertError(true); 
       setDisable(false);
       return;
     }
@@ -52,7 +52,7 @@ const [pointeuse, setPointeuse] = useState('');
     for (let i = 0; i < options.length; i++) {
   const pointage = {
     employes: options.map(opt => opt.value),  // 👈 envoyer UN ID
-    date_pointage: new Date(date_autorisation + 'T' + heure_debut).toISOString(),
+    date_pointage: `${date_autorisation} ${heure_debut}:00`,
     heure_pointage: heure_debut,
     motif: motif_abs,
     commentaire: commentaire,
@@ -187,7 +187,7 @@ const [pointeuse, setPointeuse] = useState('');
 
                 <br />
                 <div className="form-group">
-                  <button className="btn btn-prim    ary" type="sub mit" disabled={disabl}>Valider</button>
+                  <button className="btn btn-primary" type="sub mit" disabled={disabl}>Valider</button>
                 </div>
 
                 {alerterror && (

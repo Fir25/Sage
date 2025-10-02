@@ -89,7 +89,9 @@ const optionsRapport=[
  { "label": "presenceplann", "value": "presenceplann" },
  { "label": "motif", "value": "motif" },
  { "label": "departement_name", "value": "departement_name" },
- { "label": "presencenormal", "value": "presencenormal" }
+ { "label": "presencenormal", "value": "presencenormal" },
+ { "label": "ligne_de_production", "value": "ligne_de_production" },
+  { "label": "superviseur", "value": "superviseur" },
    // {"label":"Matricule","value":"Matricule"},
    // {"label":"Autorisation","value":"Autorisation"},
    // {"label":"Nom Employé","value":"Nom Employé"},
@@ -432,123 +434,66 @@ dat.length==0?"":
 <hr />
           <div className="table-responsive" >
 
-            <table id="rapsema" className="display">
+            <table id="rapsema"  >
 
 
-
-
-              <>
+             
 
                 <thead className="thead-light">
+  <tr>
+    {dat.length > 0 && dat[0].listedates.map((x, i) => (
+      <th key={`sem_${i}`} scope="col" colSpan="7" className="text-center">
+        semaine {x.semaine} <br /> de {x.first_date} à {x.end_date}
+      </th>
+    ))}
+    <th scope="col" colSpan="7" className="text-center">Totale</th>
+  </tr>
 
-                  <tr>
-
-                    <th scope="col" rowSpan="1" colSpan="1"></th>
-                    {Object.values(dat).map(({ listedates }, i) =>
-
-                      <>
-                        {i == 0 ?
-                          listedates.map(x =>
-                            <>
-                              <th scope="col" rowSpan="1" colSpan="7" className="text-center">semaine {x.semaine} <br /> de {x.first_date} à {x.end_date}</th>
-
-                            </>
-
-                          )
-                          : ""}
-                      </>
-
-                    )}
-                    <th scope="col" rowSpan="1" colSpan="7" className="text-center">Totale</th>
-                  </tr>
-
-                  <tr>
-                    <th style={{ borderRight: "1px solid #bbbbbb" }}>Employé</th>
-                    {Object.values(dat).map(({ listedates }, i) =>
-                      <>
-                        {i == 0 ? listedates.map(x =>
-                          <>
-                            <th colSpan="1">Heff</th>
-                            <th colSpan="1">Pr.Nrml</th>
-                            <th colSpan="1">déficit</th>
-                            <th colSpan="1">HS</th>
-                            <th colSpan="1"style={{ borderRight: "1px solid #bbbbbb" }}>retard</th>
-                            {/* <th colSpan="1" >Amplitude</th> */}
-                            {/* <th colSpan="1" style={{ borderRight: "1px solid #bbbbbb" }}>SAH</th> */}
-                            
-                            
-                            </>) : ""}</>)}
-
-                    <th colSpan="1">Heff</th>
-                    <th colSpan="1">Pr.Nrml</th>
-                    <th colSpan="1">déficit</th>
-                    <th colSpan="1" title="heures supplémentaires">HS</th>
-                    <th colSpan="1">retard</th>
-                    {/* <th colSpan="1"></th>
-                    <th colSpan="1" >SAH</th> */}
-               
-                  
-                    
-
-                  </tr>
-
-
-
-
-                </thead>
+  <tr>
+    <th style={{ borderRight: "1px solid #bbbbbb" }}>Employé</th>
+    <th>Département</th>
+    <th>Ligne de production</th>
+    <th>Superviseur</th>
+    <th>Heff</th>
+    <th>Pr.Nrml</th>
+    <th>Déficit</th>
+    <th>HS</th>
+    <th style={{ borderRight: "1px solid #bbbbbb" }}>Retard</th>
+    <th>Heff</th>
+    <th>Pr.Nrml</th>
+    <th>Déficit</th>
+    <th title="heures supplémentaires">HS</th>
+    <th>Retard</th>
+  </tr>
+</thead>
 
                 <tbody>
+  {dat.map((item, i) => (
+    <tr key={i}>
+      <td style={{ borderRight: "1px solid #bbbbbb" }}>{item.user_name + " " + item.last_name}</td>
+      <td>{item.departement_name}</td>
+      <td>{item.ligne_de_production}</td>
+      <td>{item.superviseur}</td>
+      {item.listesemaine.map((se, j) => (
+        <React.Fragment key={`se_${i}_${j}`}>
+          <td>{se.presencereele}</td>
+          <td>{se.presencenormal}</td>
+          <td>{se.deficit}</td>
+          <td>{se.suplementaire}</td>
+          <td>{se.retard}</td>
+        </React.Fragment>
+      ))}
+      <td>{item.reeltotale}</td>
+      <td>{item.presencetotale}</td>
+      <td>{item.deficittotale}</td>
+      <td>{item.supptotale}</td>
+      <td>{item.retardTotale}</td>
+    </tr>
+  ))}
+</tbody>
 
 
-                  <>
-
-                    {Object.values(dat).map(({ listesemaine, user_name, last_name, deficittotale, reeltotale, retardTotale, presencetotale, avant_st, supptotale }, i) =>
-                      <>       <tr>
-                        <td style={{ borderRight: "1px solid #bbbbbb" }}>{user_name + " " + last_name}</td>
-                        {listesemaine.map(se =>
-                          <>
-
-                            <td>{se.presencereele}</td>
-                            <td>{se.presencenormal}</td>
-                            <td>{se.deficit}</td>
-                            <td>{se.suplementaire}</td>
-
-                            <td>{se.retard}</td>
-                           
-                            {/* <td>{se.amplitude}</td>
-                            <td style={{ borderRight: "1px solid #bbbbbb" }}>{se.avantSortie}</td>
- */}
-
-                          </>
-                        )
-                        }
-
-                        <td>{reeltotale}</td>
-                        <td>{presencetotale}</td>
-                        <td>{deficittotale}</td>
-                        <td>{supptotale}</td>
-
-
-                        <td>{retardTotale}</td>
-                        <td></td>
-                        {/* <td>{avant_st}</td> */}
-                      
-
-                      </tr>
-
-                      </>
-                    )
-
-                    }
-
-                  </>
-
-
-
-
-                </tbody>
-
-              </>
+              
 
             </table></div></div>}
  

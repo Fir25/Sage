@@ -403,6 +403,9 @@ console.log(data)
             <th scope="col">Nom et prénom</th>
        
             <th scope="col">Matricule</th>
+              <th>Département</th>
+                    <th>Ligne_de_production</th>
+                    <th>Superviseur</th>
             <th scope="col">Date</th>
           
             <th scope="col">commentaire</th>
@@ -418,6 +421,9 @@ console.log(data)
          <td>{ab.user_name +" "+ab.last_name}</td>
      
          <td>{ab.matricule}</td>
+          <td>{ab.departement_name}</td>
+         <td>{ab.ligne_de_production}</td>
+         <td>{ab.superviseur}</td>
          <td>{ab.date}</td>
      
          <td className='table-success'>{ab.commentaire}</td>

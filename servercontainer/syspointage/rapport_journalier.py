@@ -1,4 +1,4 @@
-
+ 
 from . models import *
 from django.db import connection
 from django.core.cache import cache
@@ -8,7 +8,7 @@ def Rapportunjour(idemploye,d1):#tous les rapports sont basés à cette fonction
    listerapport=[]
    jase=[]
 
-   
+   # print("listabsences")
    if cache.get(idemploye) and cache.get(d1) and cache.get(json_data) and cache.get(listerapport):
        emp=cache.get(idemploye)
        d11=cache.get(d1)  
@@ -74,6 +74,7 @@ def Rapportunjour(idemploye,d1):#tous les rapports sont basés à cette fonction
          
          datepointage = datetime.strptime(d1, "%Y-%m-%d").date()
          idemploye = int(idemploye)  # S'assurer que c'est un int
+
          cursor = connection.cursor()
          qu = """ 
             SELECT l.lignename
@@ -96,25 +97,28 @@ def Rapportunjour(idemploye,d1):#tous les rapports sont basés à cette fonction
          Superviseur_name = r[0] if r else "..."
 
          cursor = connection.cursor()
+# -------------------------------
+# 1. Requête : pointages du jour uniquement
+# -------------------------------
          query = """
-            SELECT u.user_name, u.matricule, p.date_pointage, u.id, u.last_name ,u.superviseur,p.pointeuse_id
+            SELECT u.user_name, u.matricule, p.date_pointage, u.id, u.last_name, u.superviseur, p.pointeuse_id
             FROM syspointage_newuser AS u
             JOIN syspointage_pointage AS p ON u.id = p.employes_id
             WHERE u.id = %s
-            AND p.date_pointage >= %s::timestamp
-            AND p.date_pointage < (%s::date + INTERVAL '1 day')
+               AND p.date_pointage >= %s::timestamp
+               AND p.date_pointage < (%s::date + INTERVAL '1 day')
             ORDER BY p.date_pointage;
          """
          cursor.execute(query, (idemploye, datepointage, datepointage))
          r = cursor.fetchall()
+
          json_data = []
          for obj in r:
-            date_pointage = obj[2]  # Peut être None
-            heure = None  # Valeur par défaut
-            
-            if date_pointage is not None:
-               heure = date_pointage.time()  # Récupère uniquement l'heure
-            
+            date_pointage = obj[2]
+            if isinstance(date_pointage, str):
+               date_pointage = datetime.strptime(date_pointage, "%Y-%m-%d %H:%M:%S")
+            heure = date_pointage.time() if date_pointage else None
+
             json_data.append({
                "user_name": obj[0],
                "matricule": obj[1],
@@ -124,147 +128,245 @@ def Rapportunjour(idemploye,d1):#tous les rapports sont basés à cette fonction
                "last_name": obj[4],
                "superviseur": obj[5],
                "pointeuse_id": obj[6]
-
             })
 
-            print("json1:",json_data)  # Vérifier les données retournées
-
-
-                
-        
-        
-           
-         if json_data: 
-               
-                 
-               dayofpointage=datetime.strptime(str(json_data[0]['date_pointage']),"%Y-%m-%d").weekday()#get the number of day
-               listep=[]
-               [listep.append(obj["heure"]) for obj in json_data] 
-               print("listep",listep)
-               # if listep:
-               #    if (len(listep))!=1:
-               #       for i in range (0,len(listep)-1): 
-                                     
-               #             if not minute_interval(ttzero,datetime.strptime(str(listep[i+1]),'%H:%M:%S').time()) -minute_interval(ttzero,datetime.strptime(str(listep[i]),'%H:%M:%S').time())<= minute_interval(ttzero,datetime.strptime("00:00:30",'%H:%M:%S').time()) :                     
-               #                listepointages.append(listep[i])
-               #       listepointages.append(listep[-1]) 
-               #       print("listepoi",listepointages)
-               #    else:
-               #       listepointages.append(listep[0])            
-               # pointages=' '.join(str(e) for e in listepointages)                     
-               # nbpointages=len(listepointages) 
-               # print() 
-               
-               heureeffective = 0.0
-
-# Récupère toutes les pointeuses utilisées
-               if listep:
-                  if len(listep) > 1:
-                        for i in range(len(listep) - 1):
-                           h1 = datetime.strptime(str(listep[i]), '%H:%M:%S').time()
-                           h2 = datetime.strptime(str(listep[i+1]), '%H:%M:%S').time()
-                           delta = minute_interval(ttzero, h2) - minute_interval(ttzero, h1)
-                           if delta > minute_interval(ttzero, datetime.strptime("00:00:30", '%H:%M:%S').time()):
-                              listepointages.append(listep[i])
-                        listepointages.append(listep[-1])
-                  else:
-                        listepointages.append(listep[0])
-
-               pointages = ' '.join(str(e) for e in listepointages)
-               nbpointages = len(listepointages)
-               print("nbpointages",nbpointages)
-
-               # Identifie les pointeuses entrée/sortie dynamiquement
-               pointeuses_entree_ids = list(pointeuse.objects.filter(etat=True).values_list('id', flat=True))
-               pointeuses_sortie_ids = list(pointeuse.objects.filter(etat=False).values_list('id', flat=True))
-
-               # Trouve première entrée (pointeuse entrée)
-               entreepointage = next((obj["heure"] for obj in json_data if obj["pointeuse_id"] in pointeuses_entree_ids), None)
-
-               # Trouve dernière sortie (pointeuse sortie)
-               sortiepointage = next((obj["heure"] for obj in reversed(json_data) if obj["pointeuse_id"] in pointeuses_sortie_ids), None)
-               print("Entrée:", entreepointage)
-               print("Sortie:", sortiepointage)
-               refpointeusee = pointeuse.objects.filter(id__in=pointeuses_entree_ids, id=json_data[0]["pointeuse_id"]).values('id').first()
-               print ("refpointeusee",refpointeusee)
-               refpointeuse = refpointeusee['id'] if refpointeusee else ''
-               efpointeusee = pointeuse.objects.filter(id__in=pointeuses_sortie_ids, id=json_data[-1]["pointeuse_id"]).values('id').first()
-               efpointeuse = efpointeusee['id'] if efpointeusee else ''
-               parameters = searchDay(d1, idemploye, entreepointage,sortiepointage)# Accès aux éléments de parameters
-               if len(parameters) >= 14:
-                  statusjour = parameters[0]
-                  finentree = parameters[1]
-                  finsortieee = parameters[2]
-                  debutentrehoraire = parameters[4]
-                  debutsortiehor = parameters[5]
-                  debuthora = parameters[6]
-                  finhora = parameters[7]
-                  margedepartant = parameters[8]
-                  margeretard = parameters[9]
-                  debutpausee = parameters[10]
-                  finpausee = parameters[11]
-                  quota = parameters[12]
-                  nomhoraire=parameters[13]
-               if  (dayofpointage in range(7)) :
-                  listerapport = Day(
-                  finpausee, debutpausee, finsortieee, norr, finentrehoraire, debutentrehoraire,
-                                 debutsortiehor, debuthora, finhora, margeanticipehora,margeretardhora,
-                                 entreepointage, sortiepointage, listepointages, ttzero,json_data,
-                                 idemploye, pointages, pausee, dpausedej, fpausedej, quota,nomhoraire,refpointeuse,efpointeuse,department_name,d1,Ligne_name,Superviseur_name
-                  )
+         # -------------------------------
+         # 2. Si shift nuit → ajouter le lendemain matin (00h–07h)
+         # -------------------------------
+         if json_data:
+            dayofpointage=datetime.strptime(str(json_data[0]['date_pointage']),"%Y-%m-%d").weekday()#get the number of day
+            heures = [obj["heure"] for obj in json_data if obj["heure"]]
+            
+            pointeuses_sortie_ids1 = list(pointeuse.objects.filter(etat=False).values_list('id', flat=True))
+            shift_nuit = False
+            if heures:
+               print('heures', heures)
+               has_midday_exit = any(time(12, 0) <= h <= time(16, 0) for h in heures)
+               json_data_sorted0 = sorted(json_data, key=lambda x: x["heure"],reverse=False)
+               # Vérifier le premier et dernier pointage
+               h_debut = heures[0]
+               print('pointeuses_sortie_ids1')
+               print('objjjj',obj[6])
+               if (h_debut  <= time(8, 0)) and not has_midday_exit and json_data_sorted0[0]['pointeuse_id'] in pointeuses_sortie_ids1:
+                  shift_nuit = True
+                  print("Shift nuit détecté")
                else:
-                     ('problème détecté')
-               if listerapport : 
-                     listerapport[0]['departement'] = department_name
-                     listerapport[0]['typepaie'] = typepaie
-                     listerapport[0]['pointeuses_entree'] = refpointeuse
-                     listerapport[0]['typepaie'] = efpointeuse             
+                  print("Pas shift nuit")
+                 
+            if shift_nuit:
+               print('shift_nuit')
+               query_shift_nuit = """
+               SELECT u.user_name, u.matricule, p.date_pointage, u.id, u.last_name, u.superviseur, p.pointeuse_id
+               FROM syspointage_newuser AS u
+               JOIN syspointage_pointage AS p ON u.id = p.employes_id
+               WHERE u.id = %s
+               AND p.date_pointage >= (%s::date - INTERVAL '1 day' + INTERVAL '20 hours') -- hier 20h
+               AND p.date_pointage < (%s::date + INTERVAL '7 hours')                     -- aujourd'hui 07h
+               ORDER BY p.date_pointage;
+            """
+               cursor.execute(query_shift_nuit, (idemploye, datepointage, datepointage))
+               r2 = cursor.fetchall()
+               
+
+               for obj in r2:
+                     date_pointage = obj[2]
+                     if isinstance(date_pointage, str):
+                           date_pointage = datetime.strptime(date_pointage, "%Y-%m-%d %H:%M:%S")
+                     heure = date_pointage.time() if date_pointage else None
+
+                     # Construire le dictionnaire candidat
+                     new_entry = {
+                           "user_name": obj[0],
+                           "matricule": obj[1],
+                           "date_pointage": date_pointage.date() if date_pointage else None,
+                           "heure": heure,
+                           "iduser": obj[3],
+                           "last_name": obj[4],
+                           "superviseur": obj[5],
+                           "pointeuse_id": obj[6]
+                     }
+
+                     # Vérifier si cet enregistrement existe déjà
+                     if not any(
+                           d["date_pointage"] == new_entry["date_pointage"] and
+                           d["heure"] == new_entry["heure"] and
+                           d["pointeuse_id"] == new_entry["pointeuse_id"]
+                           for d in json_data
+                     ):
+                           json_data.append(new_entry)
+
+         # -------------------------------
+         # 3. Nettoyage + construction listep
+         # -------------------------------
+            listep = [obj["heure"] for obj in json_data if obj["heure"]]
+            print('listep',listep)
+            
+            # Supprimer les pointages suspects (lendemain avant 08h si déjà sortie à midi)
+            # -------------------------------
+            # 4. Construire listepointages (sans doublons proches)
+            # -------------------------------
+            listepointages = []
+            if listep:
+                  if len(listep) > 1:
+                     for i in range(len(listep) - 1):
+                        h1 = datetime.strptime(str(listep[i]), '%H:%M:%S').time()
+                        h2 = datetime.strptime(str(listep[i+1]), '%H:%M:%S').time()
+                        delta = minute_interval(ttzero, h2) - minute_interval(ttzero, h1)
+                        if delta > minute_interval(ttzero, datetime.strptime("00:30:30", '%H:%M:%S').time()):
+                              listepointages.append(listep[i])
+                     listepointages.append(listep[-1])
+                  else:
+                     listepointages.append(listep[0])
+
+            pointages = ' '.join(str(e) for e in listepointages)
+            nbpointages = len(listepointages)
+            print('nbpointages',nbpointages)
+            print('listepointages',listepointages)
+            # -------------------------------
+            # 5. Entrée et sortie (via pointeuses entrée/sortie)
+            # -------------------------------
+            pointeuses_entree_ids = list(pointeuse.objects.filter(etat=True).values_list('id', flat=True))
+            pointeuses_sortie_ids = list(pointeuse.objects.filter(etat=False).values_list('id', flat=True))
+
+            # Trouve première entrée (pointeuse entrée)
+            # Trier json_data par heure croissante
+            # Trier listepointages par heure croissante
+            json_data_sorted = sorted(json_data, key=lambda x: x["heure"], reverse=shift_nuit)
+
+            print('json_data',json_data_sorted)
+            # 1. Trier les pointages par heure
+            
+
+            # 2. Récupérer premier et dernier pointage
+            first_pointage = json_data_sorted[0] if json_data_sorted else None
+            print('first_pointage',first_pointage)
+            last_pointage = json_data_sorted[-1] if json_data_sorted else None
+            print('last_pointage',last_pointage)
+
+            entreepointage, sortiepointage = None, None
+
+            # 1. Trier par heure
+            
+
+            # 2. Entrée = première heure avec une pointeuse d'entrée
+            entreepointage = next(
+               (
+                  obj["heure"]
+                  for obj in (json_data_sorted)
+                  if obj["heure"] == first_pointage["heure"] and obj["pointeuse_id"] in pointeuses_entree_ids
+               ),
+               None
+             )
+            # 3. Sortie = dernière heure avec une pointeuse de sortie
+            sortiepointage = next(
+               (
+                  obj["heure"]
+                  for obj in reversed(json_data_sorted)
+                  if obj["heure"] == last_pointage["heure"] and obj["pointeuse_id"] in pointeuses_sortie_ids
+               ),
+               None
+            )
+
+            print("Entrée:", entreepointage)
+            print("Sortie:", sortiepointage)
+
+
+
+
+
+           
+            refpointeuse = ''
+            efpointeuse = ''
+
+            if json_data:  # Vérifie que json_data n’est pas vide
+               refpointeusee = pointeuse.objects.filter(
+                  id__in=pointeuses_entree_ids,
+                  id=json_data[0]["pointeuse_id"]
+               ).values('id').first()
+               refpointeuse = refpointeusee['id'] if refpointeusee else ''
+
+               efpointeusee = pointeuse.objects.filter(
+                  id__in=pointeuses_sortie_ids,
+                  id=json_data[-1]["pointeuse_id"]
+               ).values('id').first()
+               efpointeuse = efpointeusee['id'] if efpointeusee else ''
+            nom_pointeuse_entree = pointeuse.objects.filter(id=refpointeuse).values_list('nom_pointeuse', flat=True).first() if refpointeuse else ''
+            nom_pointeuse_sortie = pointeuse.objects.filter(id=efpointeuse).values_list('nom_pointeuse', flat=True).first() if efpointeuse else ''
+            parameters = searchDay(d1, idemploye, entreepointage,sortiepointage)# Accès aux éléments de parameters
+            if parameters is not None and len(parameters) >= 14:
+                     statusjour = parameters[0]
+                     finentree = parameters[1]
+                     finsortieee = parameters[2]
+                     debutentrehoraire = parameters[4]
+                     debutsortiehor = parameters[5]
+                     debuthora = parameters[6]
+                     finhora = parameters[7]
+                     margedepartant = parameters[8]
+                     margeretard = parameters[9]
+                     debutpausee = parameters[10]
+                     finpausee = parameters[11]
+                     quota = parameters[12]
+                     nomhoraire=parameters[13]
+            if  (dayofpointage in range(7)) :
+                     listerapport = Day(
+                     finpausee, debutpausee, finsortieee, norr, finentrehoraire, debutentrehoraire,
+                                    debutsortiehor, debuthora, finhora, margeanticipehora,margeretardhora,
+                                    entreepointage, sortiepointage, listepointages, ttzero,json_data,
+                                    idemploye, pointages, pausee, dpausedej, fpausedej, quota,nomhoraire,refpointeuse,efpointeuse,department_name,d1,Ligne_name,Superviseur_name,nom_pointeuse_entree,nom_pointeuse_sortie,shift_nuit
+                     )
+            else:
+                        ('problème détecté')
+            if listerapport : 
+                        listerapport[0]['departement'] = department_name
+                        listerapport[0]['typepaie'] = typepaie
+                        listerapport[0]['pointeuses_entree'] = refpointeuse
+                        listerapport[0]['typepaie'] = efpointeuse             
          l=[]
          l.append({
                 "motif": "pas de pointage",  # Motif de l'absence
-    "Entree": "00:00:00",  # Valeur par défaut pour l'heure d'entrée
-    "Sortie": "00:00:00",  # Valeur par défaut pour l'heure de sortie
-    "earlyEntree": "0.0",  # Valeur par défaut pour entrée trop tôt
-    "lateEntree": "0.0",  # Valeur par défaut pour retard d'entrée
-    "earlySortie": "0.0",  # Valeur par défaut pour sortie trop tôt
-    "lateSortie": "0.0",  # Valeur par défaut pour retard de sortie
-    "user_name": user.get('user_name', None),  # Nom de l'utilisateur
-    "matricule": user.get('matricule', None),  # Matricule
-    "date_pointage": d1,
-    "planing": "pas de pointage",  # Pas de planing
-    "heuretravail": "0.0",  # Pas d'heure de travail
-    "pause": "0.0",  # Pas de pause
-    "presencenormal": "0",  # Pas de présence normale
-    "jourtravaille": "0",  # Pas de jour travaillé
-    "iduser": idemploye,  # ID
-    "entreepointage": "00:00:00",  # Pas d'entrée
-    "sortiepointage": "00:00:00",  # Pas de sortie
-    "heureauthorisation": "0",
-    "deficit": "0.0",  # Pas de déficit
-    "pointages": "0",  # Pas de pointage
-    "tempabsence": "0.0",  # Pas d'absence
-    "jourconge": "0",  # Pas de jour de congé
-    "tempsMission": "0.0",  # Pas de temps de mission
-    "tempsconge": "0.0",  # Pas de temps de congé
-    "last_name": user.get('last_name', None),  # Nom de famille
-    "ligne_de_production":Ligne_name if user else None,
-    "superviseur": Superviseur_name if user else None,
-    "heuretravailbrute": "0.0",  # Pas d'heure de travail brute
-    "retardmidi": "0.0",  # Pas de retard à midi
-    "nomhoraire": "pas de pointage",  # Correspond à 'nomhoraire' dans listerapport
-    "debuthoraire": "00:00:00",  # Heure d'entrée par défaut
-    "finhoraire": "00:00:00",  # Heure de sortie par défaut
-    "refpointeuse": "...",  # Pas de pointage
-    "efpointeuse": "...",
-    "jour_nrmlmn_travaille": "0",  # Pas de travail
-    "jour_travaille": "0",  # Pas de travail
-    "retard": "0.0",  # Pas de retard
-    "depart_anticipe": "0.0",  # Pas de départ anticipé
-    "Absent": 1,  # L'absence est marquée
-    "heuresup": "0.0",  # Pas d'heures supplémentaires
-    "presenceplann": "0.0",  # Pas de présence planifiée
-    "departement_name": department_name if user else None,  # Département
-    "presencenormal": "0.0",  # Présence normale
+               "Entree": "00:00:00",  # Valeur par défaut pour l'heure d'entrée
+               "Sortie": "00:00:00",  # Valeur par défaut pour l'heure de sortie
+               "earlyEntree": "0.0",  # Valeur par défaut pour entrée trop tôt
+               "lateEntree": "0.0",  # Valeur par défaut pour retard d'entrée
+               "earlySortie": "0.0",  # Valeur par défaut pour sortie trop tôt
+               "lateSortie": "0.0",  # Valeur par défaut pour retard de sortie
+               "user_name": user.get('user_name', None),  # Nom de l'utilisateur
+               "matricule": user.get('matricule', None),  # Matricule
+               "date_pointage": d1,
+               "planing": "pas de pointage",  # Pas de planing
+               "heuretravail": "0.0",  # Pas d'heure de travail
+               "pause": "0.0",  # Pas de pause
+               "presencenormal": "0",  # Pas de présence normale
+               "jourtravaille": "0",  # Pas de jour travaillé
+               "iduser": idemploye,  # ID
+               "entreepointage": "00:00:00",  # Pas d'entrée
+               "sortiepointage": "00:00:00",  # Pas de sortie
+               "heureauthorisation": "0",
+               "deficit": "0.0",  # Pas de déficit
+               "pointages": "0",  # Pas de pointage
+               "tempabsence": "0.0",  # Pas d'absence
+               "jourconge": "0",  # Pas de jour de congé
+               "tempsMission": "0.0",  # Pas de temps de mission
+               "tempsconge": "0.0",  # Pas de temps de congé
+               "last_name": user.get('last_name', None),  # Nom de famille
+               "ligne_de_production":Ligne_name if user else None,
+               "superviseur": Superviseur_name if user else None,
+               "heuretravailbrute": "0.0",  # Pas d'heure de travail brute
+               "retardmidi": "0.0",  # Pas de retard à midi
+               "nomhoraire": "pas de pointage",  # Correspond à 'nomhoraire' dans listerapport
+               "debuthoraire": "00:00:00",  # Heure d'entrée par défaut
+               "finhoraire": "00:00:00",  # Heure de sortie par défaut
+               "refpointeuse": "...",  # Pas de pointage
+               "efpointeuse": "...",
+               "jour_nrmlmn_travaille": "0",  # Pas de travail
+               "jour_travaille": "0",  # Pas de travail
+               "retard": "0.0",  # Pas de retard
+               "depart_anticipe": "0.0",  # Pas de départ anticipé
+               "Absent": 1 ,  # L'absence est marquée
+               "heuresup": "0.0",  # Pas d'heures supplémentaires
+               "presenceplann": "0.0",  # Pas de présence planifiée
+               "departement_name": department_name if user else None,  # Département
+               "presencenormal": "0.0",  # Présence normale
             })
          deficitconge=0.0
          if not json_data and get_jour_semaine(d1) == "dimanche"  :  #si un jour de repos
@@ -274,6 +376,7 @@ def Rapportunjour(idemploye,d1):#tous les rapports sont basés à cette fonction
                     
                      l[0]['pointages']=listerapport[0]['pointages']
                   return l 
+                  
          else:
             
                   timeaut=0.0
@@ -378,45 +481,78 @@ def Rapportunjour(idemploye,d1):#tous les rapports sont basés à cette fonction
 
                            l[0]['tempsMission']=str(timem[0])
                            return l
-           
-                  elif absence.objects.filter(employes=idemploye,datedebut__lte=datepointage, datefin__gte=datepointage).exists():   
-            
-                     abse=absence.objects.filter(employes=idemploye,datedebut__lte=datepointage, datefin__gte=datepointage).values('datedebut','datefin','heure_debut','heure_fin','justifie')[0]
-                     listabsences.append({"datedebut":abse['datedebut'],"datefin":abse['datefin'],"heure_debut":abse['heure_debut'],"heure_fin":abse['heure_fin'],"justifie":abse['justifie']})       
                   
-                  
-                     timeab=AbsenceMission(listabsences,d1,idemploye,ttzero,finpausee,debutpausee,finsortieee,norr,finentrehoraire,pausee)
-                     if timeab:
-                        
-                        if timeab[1]==False:#if absence non justifié
-                           if listerapport:#if employé  absent mais il travaille
-                              listerapport[0]["motif"]="Absence non justifié"
-                              listerapport[0]["tempabsence"]=str(timeab[0])
-                              
+                  elif absence.objects.filter(employes=idemploye, datedebut__lte=datepointage, datefin__gte=datepointage).exists():
+                           abse = (
+                              absence.objects
+                              .filter(employes=idemploye, datedebut__lte=datepointage, datefin__gte=datepointage)
+                              .select_related('motif_abs')
+                              .values(
+                                    'datedebut',
+                                    'datefin',
+                                    'heure_debut',
+                                    'heure_fin',
+                                    'motif_abs__justifie',
+                                    'motif_abs__motif'  # ✅ ici on récupère le texte du motif
+                              )
+                              .first()
+                           )
 
-                              return listerapport
-                           else:
-                              l[0]['motif']="Absence non justifié"
-                              l[0]['tempabsence']=str(timeab[0])
-                        
-                              
-                              return l
-                        else:#abs justifié
-                           if listerapport:#if employé  absent mais il travaille
-                              deficit=0.0
-                              if float(listerapport[0]['deficit'])>timeab[0]:
-                                 deficit=float(listerapport[0]['deficit'])-timeab[0]
-                              listerapport[0]["motif"]="Absence justifié"
-                              listerapport[0]["tempabsence"]=str(timeab[0])
-                              listerapport[0]["deficit"]=deficit
-                              return listerapport
-                           else:
-                              l[0]['motif']="Absence justifié"
-                              l[0]['tempabsence']=str(timeab[0])
-                              if float(l[0]['deficit'])>timeab[0]:
-                                 deficit=float(l[0]['deficit'])-timeab[0]
-                              l[0]['deficit']=deficit
-                              return l 
+                           if abse:
+                              listabsences.append({
+                                    "datedebut": abse['datedebut'],
+                                    "datefin": abse['datefin'],
+                                    "heure_debut": abse['heure_debut'],
+                                    "heure_fin": abse['heure_fin'],
+                                    "justifie": abse['motif_abs__justifie'],
+                                    "motif": abse['motif_abs__motif']  # ✅ motif réel ajouté
+                              })
+
+                              print(listabsences)
+
+                              timeab = AbsenceMission(
+                                    listabsences,
+                                    d1,
+                                    idemploye,
+                                    ttzero,
+                                    finpausee,
+                                    debutpausee,
+                                    finsortieee,
+                                    norr,
+                                    finentrehoraire,
+                                    pausee
+                              )
+
+                              if timeab:
+                                    motif_nom = abse['motif_abs__motif']  # ✅ utiliser le vrai nom du motif
+
+                                    if timeab[1] == False:
+                                       if listerapport:
+                                          listerapport[0]["motif"] = motif_nom
+                                          listerapport[0]["tempabsence"] = str(timeab[0])
+                                          return listerapport
+                                       else:
+                                          l[0]["motif"] = motif_nom
+                                          l[0]["tempabsence"] = str(timeab[0])
+                                          return l
+                                    else:
+                                       if listerapport:
+                                          deficit = 0.0
+                                          if float(listerapport[0]['deficit']) > timeab[0]:
+                                                deficit = float(listerapport[0]['deficit']) - timeab[0]
+                                          listerapport[0]["motif"] = motif_nom
+                                          listerapport[0]["tempabsence"] = str(timeab[0])
+                                          listerapport[0]["deficit"] = deficit
+                                          return listerapport
+                                       else:
+                                          l[0]["motif"] = motif_nom
+                                          l[0]["tempabsence"] = str(timeab[0])
+                                          deficit = float(l[0]['deficit'])
+                                          if deficit > timeab[0]:
+                                                deficit -= timeab[0]
+                                          l[0]["deficit"] = deficit
+                                          return l
+
                   
                   elif Conges.objects.filter(date_autorisation=datepointage,employes=idemploye,validationrh=1,validationrh2=2,mission=False,teletravail=False).values('date_autorisation','heure_debut',"heure_fin"):
            
@@ -469,37 +605,27 @@ def Rapportunjour(idemploye,d1):#tous les rapports sont basés à cette fonction
                            listerapport[0]['heuretravail']=tra
                            listerapport[0]['deficit']=(float(listerapport[0]["presencenormal"])-tra)
                            return listerapport
-                     elif entreepointage == None or sortiepointage == None and nbpointages % 2 == 0:
-                
+                     elif nbpointages < 2 :
+                           listerapport[0]['motif'] = "Pointage impair"
+                           return listerapport
+                     elif nbpointages == 2 and entreepointage == None or sortiepointage == None  :               
                         if listerapport:
-                           listerapport[0]['motif']=" Pointage non correct "
+                           listerapport[0]['motif']="Pointage non correct"
                            return listerapport
-                     elif nbpointages < 2  :
-                        if listerapport:
-                           listerapport[0]['motif']="Pointage impair"
-                           return listerapport
-                     else:
-                        
-                        if listerapport:#si il y'a pointages
-                                 
-                           return listerapport
-                        else:
                      
-                           l[0]['motif']="Absent"
-                           return l
                                           
                            
-                  else: 
-                     if listerapport:#si il y'a pointages
-                              
-                        return listerapport
-                     else:
-                  
+                     else: 
+                        if listerapport:#si il y'a pointages
+                           l[0]['motif']="Absent"    
+                           return listerapport
+                  else:
+                     
                         l[0]['motif']="Absent"
                         return l
                   cache.set(
-               listerapport,json_data
-               ) 
+                  listerapport,json_data
+                  ) 
          
          # if findDay(d1)=="dimanche":
                   

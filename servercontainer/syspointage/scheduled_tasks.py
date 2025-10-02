@@ -305,11 +305,7 @@ def AjoutSolde():
              soldeaajoute=(((float(a[0]["heuretravail"])/60)+ float(a[0]["jourconge"]) + joursferie )*1,5) /  ( heuretheorique/60  )
          if soldeactuelle==None:
             soldeactuelle=0.0
-
-         
-
          soldeupdate=float(soldeactuelle)+soldeaajoute
-
          NewUser.objects.filter(id=a.id).update(solde=float(soldeupdate))
       return HttpResponse(status=200)
    return HttpResponse(status=202)
@@ -321,23 +317,21 @@ def download_all_attendances():
         # Récupérer toutes les pointeuses
         cursor.execute("SELECT adresse_ip, port, id FROM syspointage_pointeuse")
         pointeuses = cursor.fetchall()
-        
         for pointeuse in pointeuses:
             ip_address, port, pointeuse_id = pointeuse
             zk = ZK(ip_address, port=int(port), timeout=65, force_udp=False, ommit_ping=True)
-            
             try:
                 conn = zk.connect()
+                  # 🔹 Récupérer les infos de la pointeuse
                 attendances = conn.get_attendance()
-                print(attendances)
+               #  print(attendances)
                 
                 for single in attendances:
-                    att = str(single).split()
-                    
+                    att = str(single).split()                    
                     if att[3] and att[4]:
                         pointagedate = att[3] + " " + att[4]
-                        matricule = att[1]
-                        
+                        # print(pointagedate)
+                        matricule = att[1]                        
                         try:
                             # Vérifier que le matricule est numérique
                             int(matricule)
@@ -346,16 +340,18 @@ def download_all_attendances():
                             cursor.execute(
                                 "SELECT id FROM syspointage_newuser WHERE matricule_p = %s", [matricule]
                             )
-                            user_result = cursor.fetchone()
-                            
+                            user_result = cursor.fetchone()                            
                             if user_result:
                                 # Vérifier si le pointage existe déjà
                                 cursor.execute("""
                                     SELECT id FROM syspointage_pointage
                                     WHERE date_pointage = %s AND employes_id = %s
                                 """, [pointagedate, user_result[0]])
-                                existing_attendance = cursor.fetchone()
-                                
+                              #   print("""
+                              #       SELECT id FROM syspointage_pointage
+                              #       WHERE date_pointage = %s AND employes_id = %s
+                              #   """, [pointagedate, user_result[0]])
+                                existing_attendance = cursor.fetchone()                                 
                                 if not existing_attendance: 
                                     # Insérer le pointage
                                     cursor.execute("""
@@ -386,5 +382,5 @@ schedulepointage.every(1).hours.do(download_all_attendances)
 
 # Lancer le scheduler dans un thread séparé
 scheduler_thread = threading.Thread(target=run_scheduler_continuously, args=(schedulepointage,), daemon=True)
-scheduler_thread.start()
+scheduler_thread.start() 
         

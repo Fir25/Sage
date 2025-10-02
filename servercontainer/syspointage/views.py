@@ -77,9 +77,15 @@ class DownloadAttendanceView(APIView):
 
                 try:
                     conn = zk.connect()
+                    zk.read_sizes()
 
+                    print("Nombre d'enregistrements actuels :", zk.records)
+                    print("Capacité totale d'enregistrements :", zk.rec_cap)
+                    print("Utilisateurs actuels :", zk.users, "/", zk.users_cap)
+                    print("Empreintes actuelles :", zk.fingers, "/", zk.fingers_cap)
                     attendances = conn.get_attendance()
-
+                    print(attendances)
+                    print("Nombre d'enregistrements téléchargés :", len(attendances))
                     for single in attendances:
                         att = str(single).split()
 
@@ -1509,7 +1515,8 @@ class RapportSemaine(APIView):
                             "heureauthorisation": data["heureauthorisation"], "deficit": data["deficit"],
                             "iduser": data["iduser"], "pointages": data["pointages"],
                             "tempabsence": data["tempabsence"], "jourconge": data["jourconge"],
-                            "tempsMission": data["tempsMission"], "last_name": data["last_name"],"presenceplann": data["presenceplann"]
+                            "tempsMission": data["tempsMission"], "last_name": data["last_name"],"presenceplann": data["presenceplann"],
+                          
                         })
                         total_minutes += float(data['heuretravail'])
                         total_retard += float(data['lateEntree'])
@@ -1571,9 +1578,12 @@ class RapportSemaine(APIView):
                 "deficittotale": minutes_hours(total_all_deficit),
                 "supptotale": minutes_hours(total_all_supp),
                 "user_name": str(NewUser.objects.filter(id=int(user_id)).values()[0].get('user_name')),
-                "last_name": l
+                "last_name": l,
+                "departement_name": a[0].get("departement_name", ""), 
+                "ligne_de_production": a[0].get("ligne_de_production", ""), 
+                "superviseur": a[0].get("superviseur", "")
             })
-
+        print(all_data)
         cache.set(f"{d1}_{d2}_jsondata", all_data)
         return JsonResponse(all_data, safe=False)
 class RapportJournalier(APIView):
@@ -1754,6 +1764,9 @@ class  RapportPointage(APIView):
                         "nom_pointeuse_sortie": nom_pointeuse_sortie,
                         "pointeuses_entree": a[0].get("pointeuses_entree", ""),
                         "pointeuses_sortie": a[0].get("pointeuses_sortie", ""),
+                        "ligne_de_production": a[0].get("ligne_de_production", ""), 
+                        "superviseur": a[0].get("superviseur", ""), 
+
                     })
 
         # Mise en cache des résultats
@@ -1810,22 +1823,22 @@ class  RapportAbsences(APIView):
 
                      if a:
                         jsondata.append({"motif":a[0]["motif"],"Entree": a[0]["Entree"], "Sortie": a[0]["Sortie"], "earlyEntree":a[0]["earlyEntree"], "lateEntree":a[0]["lateEntree"], "earlySortie":a[0]["earlySortie"], "lateSortie":a[0]["lateSortie"], "user_name": a[0]["user_name"], "matricule":a[0]["matricule"], "date_pointage": a[0]["date_pointage"], "planing":a[0]["planing"],'heuretravail': a[0]["heuretravail"], 'pause': a[0]["pause"],'presencenormal':a[0]['presencenormal'],"jourtravaille":a[0]['jourtravaille'],"entreepointage":a[0]['entreepointage'],"sortiepointage":a[0]['sortiepointage'],"heureauthorisation":a[0]['heureauthorisation'],"deficit":a[0]["deficit"],"iduser":a[0]["iduser"],"pointages":a[0]["pointages"],"tempabsence":a[0]["tempabsence"],"jourconge":a[0]["jourconge"],"tempsMission":a[0]["tempsMission"],"last_name":a[0]['last_name']})  
-
                  for obj in jsondata:
                      if obj['motif']=="Absent":
                         ##compabs=compabs+1
-                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"absence","last_name":obj['last_name']})
-                     elif obj['motif']=="Absence non justifié":
-                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"Absence non justifié","last_name":obj['last_name']})
-                     elif obj['motif']=="Absence justifié":
-                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"Absence justifié","last_name":obj['last_name']})
+                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"absence","last_name":obj['last_name'],"departement_name": a[0].get("departement_name", ""),"ligne_de_production": a[0].get("ligne_de_production", ""),"superviseur": a[0].get("superviseur", "")})
+                     elif obj['motif'] not in ["Pointage non correct", "Pointage impair"]:
+                        print(obj['motif'])
+                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":obj["motif"],"last_name":obj['last_name'],"departement_name": a[0].get("departement_name", ""),"ligne_de_production": a[0].get("ligne_de_production", ""),"superviseur": a[0].get("superviseur", "")})
+                    #  elif obj['motif']=="Absence justifié":
+                    #     listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"Absence justifié","last_name":obj['last_name']})
                      
                      
-                     elif obj["motif"]=="Autorisation":
-                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"Autorisation","last_name":obj['last_name']})
+                    #  elif obj["motif"]=="Autorisation":
+                    #     listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"Autorisation","last_name":obj['last_name']})
                      
-                     elif obj['motif']=="Abs demi-journée":
-                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"Absence demi journnée","last_name":obj['last_name']})
+                    #  elif obj['motif']=="Abs demi-journée":
+                    #     listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"Absence demi journnée","last_name":obj['last_name']})
 
 
          
@@ -1869,8 +1882,6 @@ class  RapportAnomalie(APIView):
              return listab
           else: 
              motifs=motif_abs.objects.values().all()
-
-
              for y in listids:
                  jsondata=[]#pour vider la liste et ajouter la liste de l'autre employé
                  for single_date in daterange(datetime.strptime(d1,"%Y-%m-%d").date(), datetime.strptime(d2,"%Y-%m-%d").date()):
@@ -1883,10 +1894,12 @@ class  RapportAnomalie(APIView):
                  for obj in jsondata:
                      if obj['motif']=="Absent": 
                         ##compabs=compabs+1
-                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"absence","last_name":obj['last_name'],"pointages":a[0]["pointages"]})
+                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"absence","last_name":obj['last_name'],"pointages":a[0]["pointages"],"departement_name": a[0].get("departement_name", ""),"ligne_de_production": a[0].get("ligne_de_production", ""),"superviseur": a[0].get("superviseur", "")})
                      elif obj['motif']=="Pointage impair":
-                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"Pointage impair","last_name":obj['last_name'],"pointages":a[0]["pointages"]})
-                    
+                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"Pointage impair","last_name":obj['last_name'],"pointages":a[0]["pointages"],"departement_name": a[0].get("departement_name", ""),"ligne_de_production": a[0].get("ligne_de_production", ""),"superviseur": a[0].get("superviseur", "")})
+                     elif obj['motif']=="Pointage non correct":
+                        listAbsences.append({"date":str(obj["date_pointage"]),"user_name":obj["user_name"],"matricule":obj["matricule"],"commentaire":"Pointage non correct","last_name":obj['last_name'],"pointages":a[0]["pointages"],"departement_name": a[0].get("departement_name", ""),"ligne_de_production": a[0].get("ligne_de_production", ""),"superviseur": a[0].get("superviseur", "")})
+                     
          
           return JsonResponse(listAbsences, safe=False)   
 class RapportSynthese(APIView):
@@ -1931,6 +1944,7 @@ class RapportSynthese(APIView):
             tab = ''
             amplitude = 0.0
             jourtravaille = 0
+            heures =0.0
 
             for single_date in daterange(datetime.strptime(d1, "%Y-%m-%d").date(), datetime.strptime(d2, "%Y-%m-%d").date()):
                 a = Rapportunjour(int(y), str(single_date))
@@ -1955,7 +1969,7 @@ class RapportSynthese(APIView):
                         "entreepointage": a[0]['entreepointage'],
                         "sortiepointage": a[0]['sortiepointage'],
                         "heureauthorisation": a[0]['heureauthorisation'],
-                        "deficit": a[0]["deficit"],
+                        "deficit": a[0]["deficit"], 
                         "iduser": a[0]["iduser"],
                         "pointages": a[0]["pointages"],
                         "tempabsence": a[0]["tempabsence"],
@@ -1963,6 +1977,8 @@ class RapportSynthese(APIView):
                         "tempsMission": a[0]["tempsMission"],
                         "last_name": a[0]['last_name'],
                         "presenceplann": a[0]['presenceplann'],
+                        "heuresup":a[0]['heuresup'],
+                       
                     })
 
             if json_data:
@@ -1971,20 +1987,23 @@ class RapportSynthese(APIView):
                     tab = str(minutes_hours(tempsabsence))
 
                     minuts += float(obj['lateEntree'])
-                    minutestravaill += float(obj['heuretravail'])
+                    minutestravaill += float(obj['presenceplann'])
                     earlysortie += float(obj['earlySortie'])
                     defici += float(obj['deficit'])
+                    heures += float(obj['heuresup'])
+                    heuresupp =(minutes_hours(heures))
+                    print('heuresup',heuresupp)
                     sortieavantheure = str(minutes_hours(earlysortie))
                     m = str(minutes_hours(minuts))
                     travail = str(minutes_hours(minutestravaill))
                     deficit = str(minutes_hours(defici))
-                    prnormale += float(obj['presenceplann'])
+                    print('deficit',deficit)
+                    prnormale += float(obj['presencenormal'])
                     pr = str(minutes_hours(prnormale))
                     jourtravaille += float(obj['jourtravaille'])
-
-                    if obj['motif'] in ["Absent", "Absence non justifié", "Absence justifié"]:
-                        if obj["deficit"] != "0.0":
-                            joursabsence += 1
+                    
+                    if obj['motif'] in ["Absent", "ABSENCE-N-Justifié", "Absence justifié"]:                        
+                        joursabsence += 1
                     if obj['motif'] == "Congé":
                         jourconge += 1
                     if obj['motif'] == "Mission":
@@ -1999,6 +2018,7 @@ class RapportSynthese(APIView):
                     amplitude = minutestravaill / jourtravaille
 
                 listsynthese.append({
+                    "motif": a[0]["motif"],
                     "amplitude": amplitude,
                     "tempsabsence": tab,
                     "presencenormale": pr,
@@ -2012,7 +2032,11 @@ class RapportSynthese(APIView):
                     "jourconges": jourconge,
                     "heuremission": heuresmission,
                     "heureauthorisation": tempsauthorisation,
-                    "last_name": obj['last_name']
+                    "last_name": obj['last_name'],
+                    "departement_name": a[0].get("departement_name", ""), 
+                    "ligne_de_production": a[0].get("ligne_de_production", ""), 
+                    "superviseur": a[0].get("superviseur", ""),
+                    'heuresupp':heuresupp
                 })
 
         return JsonResponse(listsynthese, safe=False)

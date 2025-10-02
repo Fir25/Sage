@@ -99,7 +99,9 @@ const optionsRapport=[
  { "label": "presenceplann", "value": "presenceplann" },
  { "label": "motif", "value": "motif" },
  { "label": "departement_name", "value": "departement_name" },
- { "label": "presencenormal", "value": "presencenormal" }
+ { "label": "presencenormal", "value": "presencenormal" },
+  { "label": "ligne_de_production", "value": "ligne_de_production" },
+  { "label": "superviseur", "value": "superviseur" },
    // {"label":"Matricule","value":"Matricule"},
    // {"label":"Autorisation","value":"Autorisation"},
    // {"label":"Nom Employé","value":"Nom Employé"},
@@ -493,6 +495,9 @@ dat.length==0?"":
                    <th>Heure Entrée</th>
                    <th>Heure Sortie</th>
                     <th>Nom de pointeuse</th> 
+                    <th>Département</th>
+                    <th>Ligne_de_production</th>
+                    <th>Superviseur</th>
           
                  </tr>
         </thead>
@@ -512,7 +517,9 @@ dat.length==0?"":
     {pointage.nom_pointeuse_entree || ""} 
     {pointage.nom_pointeuse_sortie ? " / " + pointage.nom_pointeuse_sortie : ""}
   </td>
-            
+            <td>{pointage.departement_name}</td>
+                <td>{pointage.ligne_de_production}</td>
+                <td>{pointage.superviseur}</td>
            </tr>
    )}
          </tbody> 

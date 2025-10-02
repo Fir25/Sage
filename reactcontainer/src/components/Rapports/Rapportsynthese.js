@@ -106,7 +106,10 @@ export const ComponentSyntheseToPrint = React.forwardRef((props, ref) => {
   { "label": "presenceplann", "value": "presenceplann" },
   { "label": "motif", "value": "motif" },
   { "label": "departement_name", "value": "departement_name" },
-  { "label": "presencenormal", "value": "presencenormal" }
+  { "label": "presencenormal", "value": "presencenormal" },
+  { "label": "ligne_de_production", "value": "ligne_de_production" },
+  { "label": "superviseur", "value": "superviseur" },
+
     // {"label":"Matricule","value":"Matricule"},
     // {"label":"Autorisation","value":"Autorisation"},
     // {"label":"Nom Employé","value":"Nom Employé"},
@@ -460,13 +463,17 @@ export const ComponentSyntheseToPrint = React.forwardRef((props, ref) => {
               
             <th title="employé">Employé</th>
                       <th title="Matricule" >Mat</th>
+                      <th>Département</th>
+                      <th>ligne_de_production</th>
+                      <th>Superviseur</th>
          
                       <th title='heures effectives' >Heff</th>
                     
                       <th title='Retard d entrée'>Retard</th>
+                      <th title='Heures Supp'>Heures Supp</th>
                       {/* <th title='Heures avant de sortie'>SAH</th> */}
               <th scope="col">Déficit</th>
-              <th title='jours absence en déficit'>J.abs déficit</th>
+              <th title='jours absence en déficit'>J.abs déficit</th> 
               {/* <th title='Jours de congés'>congé</th>
               <th title='Mission'>mission</th>
               <th title='autorisation'>auth</th>
@@ -482,18 +489,22 @@ export const ComponentSyntheseToPrint = React.forwardRef((props, ref) => {
      <tr key={se.id}>
            <td>{se.user_name+" "+se.last_name}</td>
            <td >{se.matricule}</td>
+           <td>{se.departement_name}</td>
+                <td>{se.ligne_de_production}</td>
+                <td>{se.superviseur}</td>
     
            <td title='heures pratique'>{se.travail}</td>
            <td title='Retard d entrée'>{se.retard}</td>
+           <td title=' e'>{se.heuresupp}</td>
            {/* <td title='heures avant sortie'>{se.earlySortie}</td> */}
         <td>{se.deficit}</td>
-        {/* <td title='jours abscence en déficit'>{se.joursabsence}</td>
-        <td title='Jours de congés' >{se.jourconges}</td>
+        <td title='jours abscence en déficit'>{se.joursabsence}</td>
+        {/* <td title='Jours de congés' >{se.jourconges}</td>
         <td title='Mission' >{se.heuremission}</td>
         <td title='autorisation' >{se.heureauthorisation}</td>
       <td>{se.tempsabsence}</td> */}
       <td title='heures pratique'>{se.presencenormale}</td>
-   <td  title='Amplitude'>{se.amplitude}</td>
+  { /*<td  title='Amplitude'>{se.amplitude}</td>*/}
       </tr>
  
 )

@@ -9,7 +9,14 @@ import locale
 
    
 
-
+def to_time(val):
+    """Convertit en datetime.time si string, sinon retourne tel quel"""
+    if isinstance(val, str):
+        try:
+            return datetime.strptime(val, "%H:%M:%S").time()
+        except ValueError:
+            return None
+    return val
 def get_shift_for_entry(entreepointage,sortiepointage):
     try:
         # Conversion de l'entrée en objet time si nécessaire
@@ -44,63 +51,68 @@ def searchDay(day, idemp, entreepointage, sortiepointage):
         # Obtenir l'indice du jour de la semaine (0 = Lundi, 5 = Samedi, 6 = Dimanche)
         dayy = datetime.strptime(day, "%Y-%m-%d").weekday()
 
-        if entreepointage:
-            with connection.cursor() as cursor:
-                # Requête filtrée par shifts autorisés et priorité selon le jour de la semaine
-                query = """
-                SELECT nom 
-                FROM syspointage_horairejour 
-                WHERE %s::time BETWEEN debutentree AND finentree 
-                AND nom IN ('SHIFT APM', 'SHIFT MATIN', 'SHIFT NUIT', 'ADM', 'ADM SAMEDI')
-                ORDER BY 
-                    CASE 
-                        WHEN nom = 'ADM SAMEDI' AND %s = 5 THEN 0
-                        WHEN nom = 'ADM' AND %s != 5 THEN 1
-                        ELSE 2
-                    END
-                LIMIT 1;
-                """
-                cursor.execute(query, (entreepointage, dayy, dayy))
-                nome = cursor.fetchone()
+        print('entreepointageentreepointageentreepointage',entreepointage)
+        if entreepointage or sortiepointage :
+            if entreepointage:
+                with connection.cursor() as cursor:
+                    # Requête filtrée par shifts autorisés et priorité selon le jour de la semaine
+                    query = """
+                    SELECT nom 
+                    FROM syspointage_horairejour 
+                    WHERE %s::time BETWEEN debutentree AND finentree 
+                    AND nom IN ('SHIFT APM', 'SHIFT MATIN', 'SHIFT NUIT', 'ADM', 'ADM SAMEDI')
+                    ORDER BY 
+                        CASE 
+                            WHEN nom = 'ADM SAMEDI' AND %s = 5 THEN 0
+                            WHEN nom = 'ADM' AND %s != 5 THEN 1
+                            ELSE 2
+                        END
+                    LIMIT 1;
+                    """
+                    cursor.execute(query, (entreepointage, dayy, dayy))
+                    nome = cursor.fetchone()
 
-                if not nome:
+            else:
+                with connection.cursor() as cursor:
                     query = """
                         SELECT nom 
-                        FROM syspointage_horairejour 
-                        WHERE %s::time BETWEEN debutsortie AND finsortie
-                        AND nom IN ('SHIFT APM', 'SHIFT MATIN', 'SHIFT NUIT', 'ADM')
-                        ORDER BY 
-                            CASE 
-                                WHEN nom = 'ADM SAMEDI' AND %s = 5 THEN 0
-                                WHEN nom = 'ADM' AND %s != 5 THEN 1
-                                ELSE 2
-                            END
-                        LIMIT 1;
+                                FROM syspointage_horairejour 
+                                WHERE %s::time BETWEEN debutsortie AND finsortie + INTERVAL '2 HOUR'
+                                AND nom IN ('SHIFT APM', 'SHIFT MATIN', 'SHIFT NUIT', 'ADM')
+                                ORDER BY 
+                                    CASE 
+                                        WHEN nom = 'ADM SAMEDI' AND %s = 5 THEN 0
+                                        WHEN nom = 'ADM' AND %s != 5 THEN 1
+                                        ELSE 2
+                                    END
+                                LIMIT 1;
+
                     """  
                     cursor.execute(query, (sortiepointage, dayy, dayy))
                     nome = cursor.fetchone() 
 
-                nome = nome[0]
-
-            # Recherche via ORM
+            nome = nome[0]
+            print('nome',nome)
+                # Recherche via ORM
             horaire = horairejour.objects.filter(nom=nome).first()
+            print('horaire',horaire)
             if not horaire:
                 return default_values()
 
-            # Recherche de la pause déjeuner si elle existe
+                # Recherche de la pause déjeuner si elle existe
             pauses = Pauses.objects.filter(idhoraire=horaire.id, pausedejeuner=True).first()
             dpause = pauses.dpause if pauses else None
             fpause = pauses.fpause if pauses else None
             quota = pauses.quota if pauses else None
 
             return [
-                horaire, horaire.finentree, horaire.finsortie,
-                None, horaire.debutentree, horaire.debutsortie,
-                horaire.debut, horaire.fin, horaire.margedepartant,
-                horaire.margeretard, dpause, fpause, quota, horaire.nom
+                    horaire, horaire.finentree, horaire.finsortie,
+                    None, horaire.debutentree, horaire.debutsortie,
+                    horaire.debut, horaire.fin, horaire.margedepartant,
+                    horaire.margeretard, dpause, fpause, quota, horaire.nom
             ]
         else:
-            return default_values()
+            return default_values()    
 
     except Exception as e:
         return default_values()
@@ -189,7 +201,7 @@ def parse_to_time(value):
 
 def Day(finpause, debutpause, finsortie, norr, finentree, debutentree, debutsortie, debut, sortie,
         marge_anticipe, retard, entreepointage, sortiepointage,  listepointages,
-        ttzero, json_data, idemploye, pointages, pausee, dpausedej, fpausedej, quota,nomhoraire,refpointeuse,efpointeuse,departement_name,d1,Ligne_name,Superviseur_name):
+        ttzero, json_data, idemploye, pointages, pausee, dpausedej, fpausedej, quota,nomhoraire,refpointeuse,efpointeuse,departement_name,d1,Ligne_name,Superviseur_name,nom_pointeuse_entree,nom_pointeuse_sortie,shift_nuit):
     # Variables initiales
     earlyEntree, earlySortie, lateEntree, date_pointage,lateSortie = 0.0, 0.0, 0.0, 0.0 ,0.0
     heureTravailBrute, jourtravaille, retardmidi, defi = 0.0, 0, 0.0, 0.0
@@ -238,19 +250,65 @@ def Day(finpause, debutpause, finsortie, norr, finentree, debutentree, debutsort
                                      datetime.strptime(str(sortiepointage), '%H:%M:%S').time())
 
     # Calcul des heures de travail brutes
+    hi_brute = 0  # valeur par défaut
 
-    for i in range(0, len(listepointages) - 1, 2):
-        entree = entreepointage
-        sortiee = sortiepointage
-        if entree and sortiee:
-            if entree > sortiee:
-                # Shift de nuit
-                d1 = ajuster_shift_nuit(entree, sortiee, d1, listepointages)
-                delta = minute_interval(ttzero, datetime.combine(date.min + timedelta(days=1), sortiee) - datetime.combine(date.min, entree))
-                print ("delta",delta)
+    debut_time = parse_to_time(debut)
+    sortie_time = parse_to_time(sortie)
+
+    print("entree", entreepointage)
+    print("sortie", sortiepointage)
+    print("listepointages", listepointages)
+
+    hi_brute = 0  # valeur par défaut
+
+    if len(listepointages) >= 2 and not shift_nuit :
+        # Cas normal : on a des paires entrée/sortie
+        for i in range(0, len(listepointages) - 1, 2):
+            entree_reelle = entreepointage
+            sortie_reelle = sortiepointage 
+
+            if debut_time :
+             if entree_reelle is not None:
+                entree_reelle = max(entree_reelle, debut_time)
+             else: 
+                entree_reelle = debut_time
+
+            if sortie_time :
+             if sortie_reelle is not None:
+                sortie_reelle = min(sortie_reelle, sortie_time)
+             else: 
+                sortie_reelle = sortie_time
+            # Calcul du delta en timedelta
+            if sortie_reelle and entree_reelle:
+                if sortie_reelle >= entree_reelle:
+                    delta = datetime.combine(date.min, sortie_reelle) - datetime.combine(date.min, entree_reelle)
+                else:
+                    # Shift de nuit
+                    delta = datetime.combine(date.min + timedelta(days=1), sortie_reelle) - datetime.combine(date.min, entree_reelle)
+
+            hi_brute += delta.total_seconds() / 60
+    else:
+    # Cas spécial : shift de nuit avec une seule entrée/sortie
+        if entreepointage and sortiepointage:
+            entree_reelle = entreepointage
+            sortie_reelle = sortiepointage
+
+            # Appliquer max/min uniquement si on a des valeurs valides
+            if debut_time :
+                entree_reelle = max(entree_reelle, debut_time)
+
+            if sortie_time and sortie_reelle:
+                sortie_reelle = min(sortie_reelle, sortie_time)
+
+            if sortie_reelle >= entree_reelle:
+                delta = datetime.combine(date.min, sortie_reelle) - datetime.combine(date.min, entree_reelle)
             else:
-                delta = minute_interval(ttzero, datetime.combine(date.min, sortiee) - datetime.combine(date.min, entree))
-            hi_brute = delta
+                # Shift de nuit
+                delta = datetime.combine(date.min + timedelta(days=1), sortie_reelle) - datetime.combine(date.min, entree_reelle)
+
+            hi_brute = delta.total_seconds() / 60
+        else:
+            hi_brute = 0
     heureTravailBrute = hi_brute
     
     # Traitement du plan hebdomadaire
@@ -271,17 +329,14 @@ def Day(finpause, debutpause, finsortie, norr, finentree, debutentree, debutsort
         # diffsortieetravail=abs(datetime.combine(date.min, sortie) - datetime.combine(date.min, debut))
     # Calcul de l'heure effective et déficit
     heureeffective = hi - (quota or 0) if len(listepointages) == 2 and hi > (quota * 2 if quota else 0) else hi
-    defi = max(presencenormale - heureeffective, 0)
+    
    
     joure=get_jour_semaine(d1)
     if nomhoraire ==None or debut ==None or sortie ==None: 
         nomhoraire="... "
         debut="... "
         sortie="... "
-    debut_time = parse_to_time(debut)
-    print ("debut_time",debut_time)
-    sortie_time = parse_to_time(sortie)
-    print ("sortie_time",sortie_time)
+
     if debut_time and sortie_time:
         presence_plann_val = minute_intervale(debut_time, sortie_time)
     else:
@@ -299,17 +354,21 @@ def Day(finpause, debutpause, finsortie, norr, finentree, debutentree, debutsort
              heuresupp=0
     else :
         heuresupp=0
+    print('presence_plann_val',presence_plann_val)
+    print('presencenormale',heureTravailBrute)
+    defi = ( presence_plann_val-heureTravailBrute )
     
-   
-
+    print('defi',defi)
+    if heureTravailBrute>480.0 :
+        heureTravailBrute= 480.0 
     presence_plann_va= presence_plann_val/60
     # print("heurebrut",heureTravailBrute)
     # print("refpointeuse",refpointeuse)
     # print("heureplann",presence_plann_val)
-
-    date_pointage = ajuster_shift_nuit(entreepointage, sortiepointage, d1,listepointages ) if d1 else '...'
-    print ("date_pointage",date_pointage)
-    
+    if entreepointage and sortiepointage:
+        date_pointage = ajuster_shift_nuit(entreepointage, sortiepointage, d1,listepointages ) if d1 else '...'
+        print ("date_pointage",date_pointage)
+    else: date_pointage = d1 
     
     # Création du rapport
     listerapport.append({
@@ -346,8 +405,8 @@ def Day(finpause, debutpause, finsortie, norr, finentree, debutentree, debutsort
     "nomhoraire": str(nomhoraire),
     "debuthoraire": str(debut),
     "finhoraire": str(sortie),
-    "refpointeuse": str(refpointeuse),  
-    "efpointeuse": str(efpointeuse),
+    "refpointeuse": str(nom_pointeuse_entree),  
+    "efpointeuse": str(nom_pointeuse_sortie),
     "jour_nrmlmn_travaille": str(heureeffective),
     "jour_travaille": str(heureTravailBrute),
     "retard": lateEntree,
@@ -511,14 +570,27 @@ def minute_intervale(start, end):
         if delta < 0:
             delta += 24 * 60
         return delta
-
-    # Cas où start et end sont des timedelta
+def minute_intervalee(start, end):
+    """
+    Calcule la différence en minutes entre start et end.
+    start et end peuvent être :
+        - datetime.time
+        - datetime.datetime
+        - timedelta
+    """
     if isinstance(start, timedelta) and isinstance(end, timedelta):
-        delta = (end - start).total_seconds() / 60
-        return max(delta, 0)
-
-    return 0  # fallback
-
+        diff = end - start
+    elif isinstance(start, (datetime, time)) and isinstance(end, (datetime, time)):
+        # Convertir time en datetime
+        if isinstance(start, time):
+            start = datetime.combine(date.today(), start)
+        if isinstance(end, time):
+            end = datetime.combine(date.today(), end)
+        diff = end - start
+    else:
+        raise ValueError(f"Types non supportés pour minute_intervalee: {type(start)}, {type(end)}")
+    
+    return diff.total_seconds() / 60
 
 def daterangeAns(start_date, end_date):
     end=end_date#to get the last date (date2)

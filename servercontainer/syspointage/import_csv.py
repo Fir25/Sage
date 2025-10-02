@@ -88,7 +88,7 @@ class ImportUserCSV(APIView):
             arborescence_obj = arborescence.objects.filter(nom=str(row["Département"])).first()
             role_name = str(row["Poste Occupé"]).strip()
             role_obj = role.objects.filter(rolename=role_name).first()
-
+            
 
             try:
                 new_user = NewUser.objects.create(
